@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#555555"
+    tools:context="com.example.administrator.netimageapplication.imagedisplayer.NetImageActivity">
+
+    <android.support.v7.widget.RecyclerView
+        android:layout_alignParentBottom="true"
+        android:id="@+id/rv_thumbnail"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"/>
+
+    <RelativeLayout
+        android:layout_above="@id/rv_thumbnail"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent">
+        <ImageView
+            android:id="@+id/iv_original_image"
+            android:scaleType="centerInside"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:layout_margin="30dp"
+            android:contentDescription="@string/todo" />
+        <com.example.administrator.netimageapplication.view.PercentProgressBar
+            android:id="@+id/pb_original_image"
+            android:visibility="gone"
+            android:layout_centerInParent="true"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content" />
+    </RelativeLayout>
+
+    <ProgressBar
+        android:id="@+id/pb_image_info"
+        android:visibility="gone"
+        android:layout_centerInParent="true"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content" />
+</RelativeLayout>
