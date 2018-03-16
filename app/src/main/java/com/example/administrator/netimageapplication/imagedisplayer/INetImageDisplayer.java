@@ -13,9 +13,14 @@ import java.util.ArrayList;
 
 public interface INetImageDisplayer {
     void updateOriginalImageProgress(int percent);
+
     void setImageViewBitmap(ImageView iv, Bitmap bm);
+
     void netImageInfoLoaded(ArrayList<ArrayList<ImageInfo>> infos);
+
     void changeOriginalImageProgressBarVisibility(int visibility);
-    void changeThumbnailListProgressBarVisibility(int visibility);
+
+    void changeImageInfoProgressBarVisibility(int visibility);
+
     boolean isReadyToUpdate();
 }

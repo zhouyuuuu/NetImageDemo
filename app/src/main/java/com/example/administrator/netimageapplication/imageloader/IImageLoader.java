@@ -11,6 +11,10 @@ import com.example.administrator.netimageapplication.Bean.ImageInfo;
 
 public interface IImageLoader {
     void loadNetImageInfo();
+
     void loadNetImage(ImageInfo ii, ImageView iv, ImageCache ic, boolean thumbnail);
+
     void notifyAllThread();
+
+    void shutdownAllTask();
 }

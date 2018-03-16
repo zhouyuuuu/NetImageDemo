@@ -19,36 +19,39 @@ import java.util.List;
 
 public class TelescopicItemAnimator extends SimpleItemAnimator {
 
-    static final String ITEM_TYPE_SUB_ITEM = "new";//这个TAG是用于标记子项的View，在Animator中需要用到该TAG区分项和子项
+    // 这个TAG是用于标记子项的View，在Animator中需要用到该TAG区分项和子项
+    static final String ITEM_TYPE_SUB_ITEM = "new";
     private static final boolean DEBUG = false;
+    // 默认迭代器
     private static TimeInterpolator sDefaultInterpolator;
-
+    // 存放需要执行动画的Holder
     private ArrayList<RecyclerView.ViewHolder> mPendingRemovals = new ArrayList<>();
     private ArrayList<RecyclerView.ViewHolder> mPendingAdditions = new ArrayList<>();
+    // 存放需要执行动画的Holder封装成的Info对象
     private ArrayList<MoveInfo> mPendingMoves = new ArrayList<>();
     private ArrayList<ChangeInfo> mPendingChanges = new ArrayList<>();
-
+    // 存放将要执行动画的Holder或Holder封装成的info对象
     private ArrayList<ArrayList<RecyclerView.ViewHolder>> mAdditionsList = new ArrayList<>();
     private ArrayList<ArrayList<MoveInfo>> mMovesList = new ArrayList<>();
     private ArrayList<ArrayList<ChangeInfo>> mChangesList = new ArrayList<>();
-
+    // 存放正在执行动画的Holder或Holder封装成的info对象
     private ArrayList<RecyclerView.ViewHolder> mAddAnimations = new ArrayList<>();
     private ArrayList<RecyclerView.ViewHolder> mMoveAnimations = new ArrayList<>();
     private ArrayList<RecyclerView.ViewHolder> mRemoveAnimations = new ArrayList<>();
     private ArrayList<RecyclerView.ViewHolder> mChangeAnimations = new ArrayList<>();
-    //被点击的View
+    // 被点击的View
     private View mClickedView;
-    //被点击的View的水平位置（中心点）
+    // 被点击的View的水平位置（中心点）
     private int mClickedX;
-    //上一次被点击的View
+    // 上一次被点击的View
     private View mLastClickedView;
-    //remove向左平移距离
+    // remove向左平移距离
     private int translateLeftX;
-    //remove向右平移距离
+    // remove向右平移距离
     private int translateRightX;
-    //是否存在被展开的其他项
+    // 是否存在被展开的其他项
     private boolean existExtendedItem = false;
-    //屏幕宽度
+    // 屏幕宽度
     private int mScreenWidth;
 
     /**
@@ -58,15 +61,28 @@ public class TelescopicItemAnimator extends SimpleItemAnimator {
         this.existExtendedItem = existExtendedItem;
     }
 
+    /**
+     * 设置被点击的Item的水平位置
+     *
+     * @param mClickedX 水平位置
+     */
     void setClickedX(int mClickedX) {
         this.mClickedX = mClickedX;
     }
 
+    /**
+     * 设置被点击的Item对应的View
+     *
+     * @param v 被点击的View
+     */
     void setClickedView(View v) {
         this.mLastClickedView = mClickedView;
         mClickedView = v;
     }
 
+    /**
+     * 当例如animateRemove()(add、move、change同理)方法返回true时会调用这个方法，用来驱动所有需要的动画开始执行
+     */
     @Override
     public void runPendingAnimations() {
         boolean removalsPending = !mPendingRemovals.isEmpty();
@@ -77,7 +93,7 @@ public class TelescopicItemAnimator extends SimpleItemAnimator {
             // nothing to animate
             return;
         }
-        //计算translationLeftX和translateRightX
+        // 计算translationLeftX和translateRightX
         calculateTranslateX();
 
         for (RecyclerView.ViewHolder holder : mPendingRemovals) {
@@ -123,15 +139,21 @@ public class TelescopicItemAnimator extends SimpleItemAnimator {
         }
     }
 
+    /**
+     * 设置屏幕宽度
+     *
+     * @param width 屏幕宽度
+     */
     void setScreenWidth(int width) {
         mScreenWidth = width;
     }
 
     /**
-     * 计算Remove向左和向右平移的距离
+     * 计算Remove向左和向右平移的距离，某些情况下item会向左或向右滑出屏幕外
+     * 以滑出屏幕右边为例：为了保证item移动时相对位置不变，并且item需要滑倒屏幕外，因此我们取每个item到屏幕右边的距离值中的最大值(最左边的item到屏幕右边距离最大，他需要滑倒屏幕外，因此要取这个距离值)。
      */
     private void calculateTranslateX() {
-        if(mClickedView == null) return;
+        if (mClickedView == null) return;
         translateRightX = Integer.MIN_VALUE;
         translateLeftX = Integer.MIN_VALUE;
         for (RecyclerView.ViewHolder holder : mPendingRemovals) {
@@ -146,35 +168,42 @@ public class TelescopicItemAnimator extends SimpleItemAnimator {
         }
     }
 
+    /**
+     * 准备执行Remove动画
+     */
     @Override
     public boolean animateRemove(final RecyclerView.ViewHolder holder) {
         if (mClickedView != null) {
             resetAnimation(holder);
             mPendingRemovals.add(holder);
             return true;
-        }else {
+        } else {
             return false;
         }
     }
 
+    /**
+     * 执行Remove动画
+     */
     private void animateRemoveImpl(final RecyclerView.ViewHolder holder) {
         if (mClickedView == null) return;
         final View view = holder.itemView;
         final ViewPropertyAnimator animation = view.animate();
         mRemoveAnimations.add(holder);
+        // 子项和封面的动画实现是不同的
         if (view.getTag() != null && view.getTag().equals(ITEM_TYPE_SUB_ITEM) && mClickedView != null) {
-            //根据是否存在被展开的其他项，如果是则向被点击的View平移，否则向前一个被点击的View平移
+            // 根据是否存在被展开的其他项，如果是则向被点击的View平移，否则向前一个被点击的View平移
             if (!existExtendedItem) {
-                //SubView向点击的View收缩平移
+                // SubView向点击的View收缩平移
                 animation.translationX((mClickedView.getLeft() + mClickedView.getRight()) / 2 - (view.getLeft() + view.getRight()) / 2);
             } else {
-                //SubView向前一个点击的View收缩平移
-                if (mLastClickedView != null){
-                animation.translationX((mLastClickedView.getLeft() + mLastClickedView.getRight()) / 2 - (view.getLeft() + view.getRight()) / 2);
+                // SubView向前一个点击的View收缩平移
+                if (mLastClickedView != null) {
+                    animation.translationX((mLastClickedView.getLeft() + mLastClickedView.getRight()) / 2 - (view.getLeft() + view.getRight()) / 2);
                 }
             }
         } else {
-            //不是SubView的话，在点击的View左边的向左平移，在右边的向右平移
+            // 不是SubView的话，在点击的View左边的向左平移，在右边的向右平移
             if (view.getLeft() < mClickedView.getLeft()) {
                 animation.translationX(-translateLeftX);
             } else {
@@ -199,6 +228,9 @@ public class TelescopicItemAnimator extends SimpleItemAnimator {
                 }).start();
     }
 
+    /**
+     * 准备执行Add动画
+     */
     @Override
     public boolean animateAdd(final RecyclerView.ViewHolder holder) {
         if (mClickedView != null) {
@@ -212,6 +244,9 @@ public class TelescopicItemAnimator extends SimpleItemAnimator {
         }
     }
 
+    /**
+     * 执行Add动画
+     */
     private void animateAddImpl(final RecyclerView.ViewHolder holder) {
         if (mClickedView == null) return;
         final View view = holder.itemView;
@@ -239,6 +274,9 @@ public class TelescopicItemAnimator extends SimpleItemAnimator {
                 }).start();
     }
 
+    /**
+     * 准备执行Move动画
+     */
     @Override
     public boolean animateMove(final RecyclerView.ViewHolder holder, int fromX, int fromY,
                                int toX, int toY) {
@@ -262,6 +300,9 @@ public class TelescopicItemAnimator extends SimpleItemAnimator {
         return true;
     }
 
+    /**
+     * 执行Move动画
+     */
     private void animateMoveImpl(final RecyclerView.ViewHolder holder, int fromX, int fromY, int toX, int toY) {
         final View view = holder.itemView;
         final int deltaX = toX - fromX;
@@ -300,6 +341,9 @@ public class TelescopicItemAnimator extends SimpleItemAnimator {
         }).start();
     }
 
+    /**
+     * 准备执行Change动画
+     */
     @Override
     public boolean animateChange(RecyclerView.ViewHolder oldHolder, RecyclerView.ViewHolder newHolder,
                                  int fromX, int fromY, int toX, int toY) {
@@ -328,6 +372,9 @@ public class TelescopicItemAnimator extends SimpleItemAnimator {
         return true;
     }
 
+    /**
+     * 执行Change动画
+     */
     private void animateChangeImpl(final ChangeInfo changeInfo) {
         final RecyclerView.ViewHolder holder = changeInfo.oldHolder;
         final View view = holder == null ? null : holder.itemView;
@@ -379,6 +426,8 @@ public class TelescopicItemAnimator extends SimpleItemAnimator {
                     }).start();
         }
     }
+
+    // 以下是DefaultAnimator的默认实现，照搬过来
 
     private void endChangeAnimation(List<ChangeInfo> infoList, RecyclerView.ViewHolder item) {
         for (int i = infoList.size() - 1; i >= 0; i--) {

@@ -1,6 +1,7 @@
 package com.example.administrator.netimageapplication.util;
 
 import android.util.Log;
+
 import com.example.administrator.netimageapplication.BuildConfig;
 
 
@@ -9,7 +10,7 @@ import com.example.administrator.netimageapplication.BuildConfig;
  */
 
 public class LogUtil {
-    public static void e(String TAG,String description){
+    public static void e(String TAG, String description) {
         if (BuildConfig.LOG) {
             Log.e(TAG, description);
         }

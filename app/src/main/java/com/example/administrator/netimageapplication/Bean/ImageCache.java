@@ -15,10 +15,8 @@ public class ImageCache {
     public ImageCache() {
         //获取当前进程可以使用的内存大小，单位换算为KB
         final int maxMemory = (int) (Runtime.getRuntime().maxMemory() / 1024);
-
         //取总内存的1/4作为缓存
         final int cacheSize = maxMemory / 4;
-
         //初始化LruCache
         mImageCache = new LruCache<String, Bitmap>(cacheSize) {
             //定义每一个存储对象的大小

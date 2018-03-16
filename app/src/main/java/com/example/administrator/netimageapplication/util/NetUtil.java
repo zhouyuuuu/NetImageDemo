@@ -5,7 +5,6 @@ import android.graphics.BitmapFactory;
 
 import com.example.administrator.netimageapplication.Bean.ImageInfo;
 
-
 import org.json.JSONArray;
 import org.json.JSONObject;
 
@@ -22,36 +21,55 @@ import java.util.ArrayList;
  */
 
 public class NetUtil {
+    // 默认请求方法，DEMO中只要用到GET
     private static final java.lang.String HTTP_METHOD_GET = "GET";
-    private static final int REQUEST_TIMEOUT = 50000;
+    // 请求超时默认时间10秒
+    private static final int REQUEST_TIMEOUT = 10000;
+    // 干货集中营提供的一百张图片的api
     private static final java.lang.String resource = "http://gank.io/api/data/%E7%A6%8F%E5%88%A9/100/1";
+    // 缩略图后缀，原图url后面加上该参数则为缩略图url
     private static final java.lang.String THUMBNAIL_PARAM = "?imageView2/0/w/100";
+    // 返回的JSON数据中图片数据对应的key
     private static final java.lang.String KEY_RESULT = "results";
+    // 图片数据中url对应的key
     private static final java.lang.String KEY_URL = "url";
 
-    public static Bitmap loadBitmap(java.lang.String path, ProgressListener listener) {
+    /**
+     * 加载图片
+     */
+    public static Bitmap loadBitmap(java.lang.String path, ProgressListener listener, boolean thumbnail) {
         Bitmap bitmap = null;
         try {
             URL url = new URL(path);
             HttpURLConnection connection = (HttpURLConnection) url.openConnection();
-            connection.setConnectTimeout(REQUEST_TIMEOUT);//设置网络连接超时
-            connection.setReadTimeout(REQUEST_TIMEOUT);//设置读取数据超时
-            connection.setDoInput(true);//设置是否从httpUrlConnection读入，默认情况下是true;
+            // 设置网络连接超时
+            connection.setConnectTimeout(REQUEST_TIMEOUT);
+            // 设置读取数据超时
+            connection.setReadTimeout(REQUEST_TIMEOUT);
+            // 设置是否从httpUrlConnection读入，GET时设置为true;
+            connection.setDoInput(true);
+            // 设置是否从httpUrlConnection读入，GET时设置为false;
             connection.setDoOutput(false);
+            // 请求方式为GET
             connection.setRequestMethod(HTTP_METHOD_GET);
+            // 使用缓存
             connection.setUseCaches(true);
             connection.connect();
+            // 获得文件总大小
             int totalLength = connection.getContentLength();
+            // 已经下载的大小
             int alreadyLength = 0;
             InputStream is = connection.getInputStream();
             ByteArrayOutputStream arrayOutputStream = new ByteArrayOutputStream();
+            // 1kb的buffer
             byte[] buff = new byte[1024];
             int len;
             while ((len = is.read(buff)) != -1) {
                 arrayOutputStream.write(buff, 0, len);
                 alreadyLength += len;
-                if (listener != null) {
-                    listener.onProgressUpdate((int) (alreadyLength*1.0f / totalLength * 100));
+                // 仅在下载原图时回调进度更新监听器
+                if (!thumbnail && listener != null) {
+                    listener.onProgressUpdate((int) (alreadyLength * 1.0f / totalLength * 100));
                 }
             }
             is.close();
@@ -64,42 +82,51 @@ public class NetUtil {
         return bitmap;
     }
 
+    /**
+     * 加载图片数据
+     */
     public static ArrayList<ArrayList<ImageInfo>> loadImageInfo() {
         ArrayList<ArrayList<ImageInfo>> imageInfos = new ArrayList<>();
         try {
             URL url = new URL(resource);
             HttpURLConnection connection = (HttpURLConnection) url.openConnection();
-            connection.setConnectTimeout(REQUEST_TIMEOUT);//设置网络连接超时
-            connection.setReadTimeout(REQUEST_TIMEOUT);//设置读取数据超时
-            connection.setDoInput(true);//设置是否从httpUrlConnection读入，默认情况下是true;
+            connection.setConnectTimeout(REQUEST_TIMEOUT);
+            connection.setReadTimeout(REQUEST_TIMEOUT);
+            connection.setDoInput(true);
             connection.setDoOutput(false);
             connection.setRequestMethod(HTTP_METHOD_GET);
             connection.setUseCaches(true);
             connection.connect();
             StringBuilder resultBuilder = new StringBuilder();
             BufferedReader reader = new BufferedReader(new InputStreamReader(connection.getInputStream()));
-            java.lang.String tempLine;
+            String tempLine;
+            // 一行一行写进builder里
             while ((tempLine = reader.readLine()) != null) {
                 resultBuilder.append(tempLine);
             }
-            //System.out.println(resultBuffer);
             reader.close();
-            java.lang.String result = resultBuilder.toString();
+            String result = resultBuilder.toString();
             JSONObject jsonObject = new JSONObject(result);
             JSONArray imageJsonArray = jsonObject.getJSONArray(KEY_RESULT);
             ArrayList<ImageInfo> group = null;
-            for (int i=0;i<imageJsonArray.length();i++) {
+            for (int i = 0; i < imageJsonArray.length(); i++) {
                 JSONObject imageJson = imageJsonArray.getJSONObject(i);
-                java.lang.String originalImageUrl = imageJson.getString(KEY_URL);
-                java.lang.String thumbnailUrl = originalImageUrl + THUMBNAIL_PARAM;
-                ImageInfo imageInfo = new ImageInfo(ImageInfo.ITEM_TYPE_SUB_ITEM,thumbnailUrl,originalImageUrl);
-                if (i%10==0){
+                // 拿到原图Url
+                String originalImageUrl = imageJson.getString(KEY_URL);
+                // 拿到缩略图Url
+                String thumbnailUrl = originalImageUrl + THUMBNAIL_PARAM;
+                // new一个ImageInfo对象把URL传进去
+                ImageInfo imageInfo = new ImageInfo(ImageInfo.ITEM_TYPE_SUB_ITEM, thumbnailUrl, originalImageUrl);
+                if (i % 10 == 0) {
+                    // 按每10张图片分为新的一组，每组的第一个位置添加一张封面，封面为10张图片中的第一张
                     group = new ArrayList<>();
                     imageInfos.add(group);
-                    ImageInfo coverImageInfo = new ImageInfo(ImageInfo.ITEM_TYPE_ITEM,thumbnailUrl,originalImageUrl);
+                    // 先复制第一张图片作为封面添加进group中
+                    ImageInfo coverImageInfo = new ImageInfo(ImageInfo.ITEM_TYPE_ITEM, thumbnailUrl, originalImageUrl);
                     group.add(coverImageInfo);
                 }
                 if (group != null) {
+                    // 将图片数据添加到group
                     group.add(imageInfo);
                 }
             }
@@ -109,6 +136,9 @@ public class NetUtil {
         return imageInfos;
     }
 
+    /**
+     * 进度监听器
+     */
     public interface ProgressListener {
         void onProgressUpdate(int percent);
     }

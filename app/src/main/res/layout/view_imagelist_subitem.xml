@@ -8,13 +8,8 @@
         android:layout_width="60dp"
         android:layout_height="70dp"
         android:layout_centerInParent="true"
-        android:contentDescription="@string/todo"
         android:layout_margin="5dp"
+        android:contentDescription="@string/todo"
         android:scaleType="centerCrop" />
 
-    <TextView
-        android:id="@+id/tv_image"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_centerInParent="true" />
 </RelativeLayout>

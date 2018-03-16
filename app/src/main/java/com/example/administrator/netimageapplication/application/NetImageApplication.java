@@ -2,6 +2,7 @@ package com.example.administrator.netimageapplication.application;
 
 import android.annotation.SuppressLint;
 import android.app.Application;
+import android.content.Context;
 
 /**
  * Edited by Administrator on 2018/3/14.
@@ -9,15 +10,15 @@ import android.app.Application;
 
 public class NetImageApplication extends Application {
     @SuppressLint("StaticFieldLeak")
-    private static Application netImageApplication = null;
+    private static Context mContext;
 
-    public static Application getApplication() {
-        return netImageApplication;
+    public static Context getApplication() {
+        return mContext;
     }
 
     @Override
     public void onCreate() {
         super.onCreate();
-        netImageApplication = this;
+        mContext = this;
     }
 }

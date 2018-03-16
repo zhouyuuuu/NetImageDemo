@@ -17,20 +17,28 @@ import java.io.IOException;
  */
 
 public class DiskUtil {
-    public static Bitmap loadBitmap(@NonNull String url){
+    /**
+     * 从硬盘中获取图片
+     */
+    public static Bitmap loadBitmap(@NonNull String url) {
+        // 文件名为url的hashcode，因为存储时也是用hashcode作为文件名
         String fileName = String.valueOf(url.hashCode());
-        String path = NetImageApplication.getApplication().getCacheDir().getAbsolutePath()+"/"+fileName;
-        LogUtil.e("disk",path);
+        String path = NetImageApplication.getApplication().getCacheDir().getAbsolutePath() + "/" + fileName;
         File file = new File(path);
-        if (!file.exists()){
+        if (!file.exists()) {
             return null;
-        }else {
+        } else {
             return BitmapFactory.decodeFile(path);
         }
     }
 
-    public static void saveBitmap(@NonNull Bitmap bitmap,@NonNull String url){
+    /**
+     * 将图片存入硬盘
+     */
+    public static void saveBitmap(@NonNull Bitmap bitmap, @NonNull String url) {
+        // 用hashcode作为文件名可以避免url长度太大造成文件名过长
         String fileName = String.valueOf(url.hashCode());
+        // 用默认缓存文件夹作为路径
         File f = new File(NetImageApplication.getApplication().getCacheDir().getAbsolutePath(), fileName);
         if (f.exists()) {
             boolean deleted = f.delete();
@@ -47,7 +55,7 @@ public class DiskUtil {
         } catch (IOException e) {
             // TODO Auto-generated catch block
             e.printStackTrace();
-        }finally {
+        } finally {
             if (out != null) {
                 try {
                     out.close();
