@@ -11,6 +11,9 @@ import com.example.administrator.netimageapplication.util.BitmapUtil;
 import com.example.administrator.netimageapplication.util.DiskUtil;
 import com.example.administrator.netimageapplication.util.NetUtil;
 
+import org.json.JSONException;
+
+import java.io.IOException;
 import java.lang.ref.WeakReference;
 import java.util.ArrayList;
 import java.util.concurrent.PriorityBlockingQueue;
@@ -160,10 +163,21 @@ public class ImageLoader implements IImageLoader, NetUtil.ProgressListener {
 
         @Override
         protected void call() {
-            ArrayList<ArrayList<ImageInfo>> infos = NetUtil.loadImageInfo();
+            ArrayList<ArrayList<ImageInfo>> infos = null;
+            try {
+                infos = NetUtil.loadImageInfo();
+            } catch (IOException e) {
+                e.printStackTrace();
+            } catch (JSONException e) {
+                e.printStackTrace();
+            }
             NetImagePresenter netImagePresenter = mNetImagePresenterRef.get();
             if (netImagePresenter != null) {
-                netImagePresenter.netImageInfoLoaded(infos);
+                if (infos != null) {
+                    netImagePresenter.netImageInfoLoaded(infos);
+                }else {
+                    netImagePresenter.loadImageInfoFailed();
+                }
             }
         }
     }
@@ -204,6 +218,10 @@ public class ImageLoader implements IImageLoader, NetUtil.ProgressListener {
                 if (imageView != null) {
                     // 获取图片
                     bitmap = getBitmap(url, thumbnail, imageView);
+                    if (bitmap == null) {
+                        netImagePresenter.loadImageFailed(thumbnail);
+                        return;
+                    }
                     // 缓存一份到内存缓存中
                     ImageCache imageCache = imageCacheRef.get();
                     if (imageCache != null) {

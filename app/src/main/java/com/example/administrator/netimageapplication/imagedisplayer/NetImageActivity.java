@@ -5,22 +5,30 @@ import android.os.Bundle;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
+import android.view.View;
 import android.widget.ImageView;
 import android.widget.ProgressBar;
+import android.widget.TextView;
+import android.widget.Toast;
 
 import com.example.administrator.netimageapplication.Bean.ImageCache;
 import com.example.administrator.netimageapplication.Bean.ImageInfo;
 import com.example.administrator.netimageapplication.R;
+import com.example.administrator.netimageapplication.application.NetImageApplication;
 import com.example.administrator.netimageapplication.imagepresenter.NetImagePresenter;
 import com.example.administrator.netimageapplication.view.PercentProgressBar;
 
 import java.util.ArrayList;
 
-public class NetImageActivity extends AppCompatActivity implements INetImageDisplayer, NetImageAdapter.ItemClickListener {
+public class NetImageActivity extends AppCompatActivity implements INetImageDisplayer, NetImageAdapter.ItemClickListener, View.OnClickListener {
+    // 图片加载失败
+    private static final String INFO_LOAD_FAILED = "有张图片加载失败了~~";
     // 默认的动画时间
     private static final int ANIMATOR_INTERVAL_DEFAULT = 200;
     // 默认的删除动画滞后时间
     private static final int ANIMATOR_REMOVE_DELAY_DEFAULT = (int) (1.5f * ANIMATOR_INTERVAL_DEFAULT);
+    // 数据加载失败按钮
+    private TextView mTvRetry;
     // 原图大图的ImageView
     private ImageView mIvOriginalImage;
     // 加载原图的进度条
@@ -68,6 +76,7 @@ public class NetImageActivity extends AppCompatActivity implements INetImageDisp
         mPbLoadImageInfo = findViewById(R.id.pb_image_info);
         mRvThumbnailList = findViewById(R.id.rv_thumbnail);
         mIvOriginalImage = findViewById(R.id.iv_original_image);
+        mTvRetry = findViewById(R.id.tv_retry);
     }
 
     /**
@@ -102,6 +111,7 @@ public class NetImageActivity extends AppCompatActivity implements INetImageDisp
                 }
             }
         });
+        mTvRetry.setOnClickListener(this);
     }
 
     /**
@@ -146,6 +156,26 @@ public class NetImageActivity extends AppCompatActivity implements INetImageDisp
     @Override
     public boolean isReadyToUpdate() {
         return mRvThumbnailList.getScrollState() == RecyclerView.SCROLL_STATE_IDLE;
+    }
+
+    @Override
+    public void setRetryButtonVisibility(final int visibility) {
+        runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                mTvRetry.setVisibility(visibility);
+            }
+        });
+    }
+
+    @Override
+    public void ToastImageLoadFailedInfo() {
+        runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                Toast.makeText(NetImageApplication.getApplication(),INFO_LOAD_FAILED,Toast.LENGTH_SHORT).show();
+            }
+        });
     }
 
     /**
@@ -353,5 +383,17 @@ public class NetImageActivity extends AppCompatActivity implements INetImageDisp
     protected void onDestroy() {
         mNetImagePresenter.stopLoading();
         super.onDestroy();
+    }
+
+    @Override
+    public void onClick(View v) {
+        switch (v.getId()){
+            case R.id.tv_retry:
+                mTvRetry.setVisibility(View.GONE);
+                loadImageInfos();
+                break;
+            default:
+                break;
+        }
     }
 }

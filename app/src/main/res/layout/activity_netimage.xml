@@ -39,4 +39,15 @@
         android:layout_height="wrap_content"
         android:layout_centerInParent="true"
         android:visibility="gone" />
+
+    <TextView
+        android:id="@+id/tv_retry"
+        android:visibility="gone"
+        android:drawableTop="@mipmap/retry"
+        android:textSize="12sp"
+        android:textColor="#ffffff"
+        android:layout_centerInParent="true"
+        android:text="@string/tv_retry"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content" />
 </RelativeLayout>

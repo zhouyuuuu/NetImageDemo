@@ -110,4 +110,17 @@ public class NetImagePresenter {
     public void stopLoading(){
         iImageLoader.shutdownAllTask();
     }
+
+    public void loadImageFailed(boolean thumbnail){
+        if (!thumbnail) {
+            iNetImageDisplayer.changeOriginalImageProgressBarVisibility(View.GONE);
+        }
+        iNetImageDisplayer.ToastImageLoadFailedInfo();
+    }
+
+    public void loadImageInfoFailed(){
+        // 隐藏进度条
+        iNetImageDisplayer.changeImageInfoProgressBarVisibility(View.GONE);
+        iNetImageDisplayer.setRetryButtonVisibility(View.VISIBLE);
+    }
 }
