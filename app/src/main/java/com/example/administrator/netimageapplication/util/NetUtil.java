@@ -3,7 +3,8 @@ package com.example.administrator.netimageapplication.util;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 
-import com.example.administrator.netimageapplication.Bean.ImageInfo;
+import com.example.administrator.netimageapplication.bean.ImageInfo;
+import com.example.administrator.netimageapplication.view.PercentProgressBar;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -30,7 +31,7 @@ public class NetUtil {
     // 干货集中营提供的一百张图片的api
     private static final java.lang.String resource = "http://gank.io/api/data/%E7%A6%8F%E5%88%A9/100/1";
     // 缩略图后缀，原图url后面加上该参数则为缩略图url
-    private static final java.lang.String THUMBNAIL_PARAM = "?imageView2/0/w/100";
+    private static final java.lang.String THUMBNAIL_PARAM = "?imageView2/0/w/300";
     // 返回的JSON数据中图片数据对应的key
     private static final java.lang.String KEY_RESULT = "results";
     // 图片数据中url对应的key
@@ -39,7 +40,7 @@ public class NetUtil {
     /**
      * 加载图片
      */
-    public static Bitmap loadBitmap(java.lang.String path, ProgressListener listener, boolean thumbnail) {
+    public static Bitmap loadBitmap(java.lang.String path, ProgressListener listener, PercentProgressBar percentProgressBar) {
         Bitmap bitmap = null;
         try {
             URL url = new URL(path);
@@ -74,8 +75,8 @@ public class NetUtil {
                 arrayOutputStream.write(buff, 0, len);
                 alreadyLength += len;
                 // 仅在下载原图时回调进度更新监听器
-                if (!thumbnail && listener != null) {
-                    listener.onProgressUpdate((int) (alreadyLength * 1.0f / totalLength * 100));
+                if (listener != null) {
+                    listener.onProgressUpdate((int) (alreadyLength * 1.0f / totalLength * 100),percentProgressBar);
                 }
             }
             is.close();
@@ -146,6 +147,6 @@ public class NetUtil {
      * 进度监听器
      */
     public interface ProgressListener {
-        void onProgressUpdate(int percent);
+        void onProgressUpdate(int percent, PercentProgressBar percentProgressBar);
     }
 }

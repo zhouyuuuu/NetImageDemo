@@ -4,12 +4,13 @@ import android.graphics.Bitmap;
 import android.support.annotation.NonNull;
 import android.widget.ImageView;
 
-import com.example.administrator.netimageapplication.Bean.ImageCache;
-import com.example.administrator.netimageapplication.Bean.ImageInfo;
+import com.example.administrator.netimageapplication.bean.ImageCache;
+import com.example.administrator.netimageapplication.bean.ImageInfo;
 import com.example.administrator.netimageapplication.imagepresenter.NetImagePresenter;
 import com.example.administrator.netimageapplication.util.BitmapUtil;
 import com.example.administrator.netimageapplication.util.DiskUtil;
 import com.example.administrator.netimageapplication.util.NetUtil;
+import com.example.administrator.netimageapplication.view.PercentProgressBar;
 
 import org.json.JSONException;
 
@@ -37,7 +38,7 @@ public class ImageLoader implements IImageLoader, NetUtil.ProgressListener {
         this.mNetImagePresenterRef = new WeakReference<>(mNetImagePresenter);
         mImageLoader = this;
         mThreadPoolExecutor = new ThreadPoolExecutor(3, 5, 10, TimeUnit.SECONDS, new PriorityBlockingQueue<Runnable>());
-        mNotifyThreadPoolExecutor = new ThreadPoolExecutor(1,1,10,TimeUnit.SECONDS,new PriorityBlockingQueue<Runnable>());
+        mNotifyThreadPoolExecutor = new ThreadPoolExecutor(1, 1, 10, TimeUnit.SECONDS, new PriorityBlockingQueue<Runnable>());
     }
 
     /**
@@ -52,8 +53,8 @@ public class ImageLoader implements IImageLoader, NetUtil.ProgressListener {
      * 提交一条加载图片的线程到线程池中
      */
     @Override
-    public void loadNetImage(ImageInfo ii, ImageView iv, ImageCache ic, boolean thumbnail) {
-        mThreadPoolExecutor.execute(new LoadNetImageRunnable(1, ii, iv, ic, thumbnail));
+    public void loadNetImage(ImageInfo ii, ImageView iv, PercentProgressBar ppb, ImageCache ic, boolean thumbnail) {
+        mThreadPoolExecutor.execute(new LoadNetImageRunnable(1, ii, ppb, iv, ic, thumbnail));
     }
 
     /**
@@ -78,23 +79,23 @@ public class ImageLoader implements IImageLoader, NetUtil.ProgressListener {
      * @param percent 进度百分比
      */
     @Override
-    public void onProgressUpdate(int percent) {
+    public void onProgressUpdate(int percent, PercentProgressBar percentProgressBar) {
         NetImagePresenter netImagePresenter = mNetImagePresenterRef.get();
         if (netImagePresenter != null) {
-            netImagePresenter.loadingProgressUpdate(percent);
+            netImagePresenter.loadingProgressUpdate(percent, percentProgressBar);
         }
     }
 
     /**
      * 通过三级缓存策略获取图片
      */
-    private Bitmap getBitmap(String url, boolean thumbnail, ImageView imageView) {
+    private Bitmap getBitmap(String url, ImageView imageView, PercentProgressBar percentProgressBar) {
         // 硬盘中获取图片
-        Bitmap bitmap = DiskUtil.loadBitmap(url);
+        Bitmap bitmap = DiskUtil.loadBitmap(url, this, percentProgressBar);
         // 如果硬盘获取不到
         if (bitmap == null) {
             // 网络下载图片
-            bitmap = NetUtil.loadBitmap(url, mImageLoader, thumbnail);
+            bitmap = NetUtil.loadBitmap(url, mImageLoader, percentProgressBar);
             if (bitmap != null) {
                 // 下载完成的图片进行压缩
                 bitmap = BitmapUtil.resizeBitmap(bitmap, imageView);
@@ -175,7 +176,7 @@ public class ImageLoader implements IImageLoader, NetUtil.ProgressListener {
             if (netImagePresenter != null) {
                 if (infos != null) {
                     netImagePresenter.netImageInfoLoaded(infos);
-                }else {
+                } else {
                     netImagePresenter.loadImageInfoFailed();
                 }
             }
@@ -189,13 +190,15 @@ public class ImageLoader implements IImageLoader, NetUtil.ProgressListener {
 
         private ImageInfo imageInfo;
         private WeakReference<ImageView> imageViewRef;
+        private WeakReference<PercentProgressBar> percentProgressBarRef;
         private WeakReference<ImageCache> imageCacheRef;
         private boolean thumbnail;
 
-        LoadNetImageRunnable(int priority, ImageInfo imageInfo, ImageView imageView, ImageCache imageCache, boolean thumbnail) {
+        LoadNetImageRunnable(int priority, ImageInfo imageInfo, PercentProgressBar percentProgressBar, ImageView imageView, ImageCache imageCache, boolean thumbnail) {
             super(priority);
             this.imageInfo = imageInfo;
             this.imageViewRef = new WeakReference<>(imageView);
+            this.percentProgressBarRef = new WeakReference<>(percentProgressBar);
             this.imageCacheRef = new WeakReference<>(imageCache);
             this.thumbnail = thumbnail;
         }
@@ -213,13 +216,14 @@ public class ImageLoader implements IImageLoader, NetUtil.ProgressListener {
                 url = imageInfo.getOriginalImageUrl();
             }
             ImageView imageView = imageViewRef.get();
+            PercentProgressBar percentProgressBar = percentProgressBarRef.get();
             NetImagePresenter netImagePresenter = mNetImagePresenterRef.get();
             if (netImagePresenter != null) {
                 if (imageView != null) {
                     // 获取图片
-                    bitmap = getBitmap(url, thumbnail, imageView);
+                    bitmap = getBitmap(url, imageView, percentProgressBar);
                     if (bitmap == null) {
-                        netImagePresenter.loadImageFailed(thumbnail);
+                        netImagePresenter.loadImageFailed(percentProgressBar);
                         return;
                     }
                     // 缓存一份到内存缓存中
@@ -238,10 +242,10 @@ public class ImageLoader implements IImageLoader, NetUtil.ProgressListener {
                             }
                         }
                         // 通知presenter图片加载完成
-                        netImagePresenter.netImageLoaded(bitmap, imageView);
+                        netImagePresenter.netImageLoaded(bitmap, imageView, percentProgressBar);
                     }
                 } else {
-                    netImagePresenter.netImageLoaded(null, null);
+                    netImagePresenter.netImageLoaded(null, null, null);
                 }
             }
         }

@@ -3,7 +3,8 @@ package com.example.administrator.netimageapplication.imagedisplayer;
 import android.graphics.Bitmap;
 import android.widget.ImageView;
 
-import com.example.administrator.netimageapplication.Bean.ImageInfo;
+import com.example.administrator.netimageapplication.bean.ImageInfo;
+import com.example.administrator.netimageapplication.view.PercentProgressBar;
 
 import java.util.ArrayList;
 
@@ -12,13 +13,13 @@ import java.util.ArrayList;
  */
 
 public interface INetImageDisplayer {
-    void updateOriginalImageProgress(int percent);
+    void updateImageLoadingProgress(int percent, PercentProgressBar percentProgressBar);
 
     void setImageViewBitmap(ImageView iv, Bitmap bm);
 
     void netImageInfoLoaded(ArrayList<ArrayList<ImageInfo>> infos);
 
-    void changeOriginalImageProgressBarVisibility(int visibility);
+    void changeImageProgressBarVisibility(PercentProgressBar percentProgressBar, int visibility);
 
     void changeImageInfoProgressBarVisibility(int visibility);
 

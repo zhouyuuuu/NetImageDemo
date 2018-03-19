@@ -1,4 +1,4 @@
-package com.example.administrator.netimageapplication.Bean;
+package com.example.administrator.netimageapplication.bean;
 
 /**
  * Edited by Administrator on 2018/3/14.

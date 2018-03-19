@@ -62,9 +62,9 @@ public class PercentProgressBar extends View {
             case MeasureSpec.EXACTLY:
                 return MeasureSpec.getSize(measureSpec);
             case MeasureSpec.AT_MOST:
-                return SIZE_DEFAULT;
+                return MeasureSpec.getSize(measureSpec)<SIZE_DEFAULT?MeasureSpec.getSize(measureSpec):SIZE_DEFAULT;
             case MeasureSpec.UNSPECIFIED:
-                return 0;
+                return SIZE_DEFAULT;
             default:
                 return 0;
         }

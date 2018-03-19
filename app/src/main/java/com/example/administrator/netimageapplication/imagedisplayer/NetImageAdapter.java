@@ -8,10 +8,11 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ImageView;
 
-import com.example.administrator.netimageapplication.Bean.ImageCache;
-import com.example.administrator.netimageapplication.Bean.ImageInfo;
 import com.example.administrator.netimageapplication.R;
 import com.example.administrator.netimageapplication.application.NetImageApplication;
+import com.example.administrator.netimageapplication.bean.ImageCache;
+import com.example.administrator.netimageapplication.bean.ImageInfo;
+import com.example.administrator.netimageapplication.view.PercentProgressBar;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -20,7 +21,7 @@ import java.util.List;
  * Edited by Administrator on 2018/3/14.
  */
 
-public class NetImageAdapter extends RecyclerView.Adapter<NetImageAdapter.ImageViewHolder> {
+public class NetImageAdapter extends RecyclerView.Adapter<NetImageAdapter.ItemHolder> {
     // 展示的图片数据
     private final ArrayList<ImageInfo> mDisplayingImageInfos;
     // 布局加载器，作为全局变量就不用每次都去调用from方法，降低ViewHolder创建效率
@@ -43,22 +44,22 @@ public class NetImageAdapter extends RecyclerView.Adapter<NetImageAdapter.ImageV
 
     @NonNull
     @Override
-    public ImageViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
+    public ItemHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
         View v;
         // 根据viewType加载不同布局
         if (viewType == ImageInfo.ITEM_TYPE_ITEM) {
             v = mLayoutInflater.inflate(R.layout.view_imagelist_item, parent, false);
-            return new ImageViewHolder(v);
+            return new ItemHolder(v);
         } else {
             v = mLayoutInflater.inflate(R.layout.view_imagelist_subitem, parent, false);
             // 这里需要给view打个标记，用于在TelescopicItemAnimator的动画中区分封面和子项
             v.setTag(TelescopicItemAnimator.ITEM_TYPE_SUB_ITEM);
-            return new ImageViewHolder(v);
+            return new ItemHolder(v);
         }
     }
 
     @Override
-    public void onBindViewHolder(@NonNull final ImageViewHolder holder, int position) {
+    public void onBindViewHolder(@NonNull final ItemHolder holder, int position) {
         ImageInfo imageInfo = mDisplayingImageInfos.get(position);
         // 先从内存缓存中获取
         Bitmap image = mImageCache.getBitmap(imageInfo.getThumbnailUrl());
@@ -67,7 +68,7 @@ public class NetImageAdapter extends RecyclerView.Adapter<NetImageAdapter.ImageV
             holder.iv.setImageBitmap(image);
         } else {
             holder.iv.setImageResource(R.drawable.bg_gray_round);
-            mNetImageActivity.loadImage(holder.iv, imageInfo, mImageCache, true);
+            mNetImageActivity.loadImage(holder.iv, holder.ppb, imageInfo, mImageCache, true);
         }
         // Item点击事件的监听器在这里触发
         holder.iv.setOnClickListener(new View.OnClickListener() {
@@ -84,7 +85,7 @@ public class NetImageAdapter extends RecyclerView.Adapter<NetImageAdapter.ImageV
      * 重写了这个方法，如果payloads不为空，就不重新绑定View了避免Change动画执行覆盖掉其他动画
      */
     @Override
-    public void onBindViewHolder(@NonNull ImageViewHolder holder, int position, @NonNull List<Object> payloads) {
+    public void onBindViewHolder(@NonNull ItemHolder holder, int position, @NonNull List<Object> payloads) {
         if (payloads.isEmpty()) {
             onBindViewHolder(holder, position);
         }
@@ -108,18 +109,21 @@ public class NetImageAdapter extends RecyclerView.Adapter<NetImageAdapter.ImageV
      * Item点击监听器
      */
     public interface ItemClickListener {
-        void OnItemClick(int position, ImageViewHolder holder);
+        void OnItemClick(int position, ItemHolder holder);
     }
 
     /**
-     * ViewHolder，子项和封面都是由一个imageView因此用一类Holder就可以
+     * 封面和子项ViewHolder
      */
-    static class ImageViewHolder extends RecyclerView.ViewHolder {
+    static class ItemHolder extends RecyclerView.ViewHolder {
         ImageView iv;
+        PercentProgressBar ppb;
 
-        ImageViewHolder(View itemView) {
+        ItemHolder(View itemView) {
             super(itemView);
             iv = itemView.findViewById(R.id.iv_image);
+            ppb = itemView.findViewById(R.id.ppb_loading);
         }
     }
+
 }

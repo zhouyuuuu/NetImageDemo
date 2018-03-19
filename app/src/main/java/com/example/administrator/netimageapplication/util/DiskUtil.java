@@ -5,8 +5,11 @@ import android.graphics.BitmapFactory;
 import android.support.annotation.NonNull;
 
 import com.example.administrator.netimageapplication.application.NetImageApplication;
+import com.example.administrator.netimageapplication.view.PercentProgressBar;
 
+import java.io.ByteArrayOutputStream;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -20,7 +23,8 @@ public class DiskUtil {
     /**
      * 从硬盘中获取图片
      */
-    public static Bitmap loadBitmap(@NonNull String url) {
+    public static Bitmap loadBitmap(@NonNull String url, NetUtil.ProgressListener listener, PercentProgressBar percentProgressBar) {
+        Bitmap bitmap = null;
         // 文件名为url的hashcode，因为存储时也是用hashcode作为文件名
         String fileName = String.valueOf(url.hashCode());
         String path = NetImageApplication.getApplication().getCacheDir().getAbsolutePath() + "/" + fileName;
@@ -28,7 +32,34 @@ public class DiskUtil {
         if (!file.exists()) {
             return null;
         } else {
-            return BitmapFactory.decodeFile(path);
+            try {
+                // 获得文件总大小
+                long totalLength = file.length();
+                // 已经下载的大小
+                long alreadyLength = 0;
+                FileInputStream fileInputStream = new FileInputStream(file);
+                ByteArrayOutputStream arrayOutputStream = new ByteArrayOutputStream();
+                // 1kb的buffer
+                byte[] buff = new byte[1024];
+                int len;
+                while ((len = fileInputStream.read(buff)) != -1) {
+                    arrayOutputStream.write(buff, 0, len);
+                    alreadyLength += len;
+                    // 仅在下载原图时回调进度更新监听器
+                    if (listener != null) {
+                        listener.onProgressUpdate((int) (alreadyLength * 1.0f / totalLength * 100), percentProgressBar);
+                    }
+                }
+                fileInputStream.close();
+                arrayOutputStream.close();
+                byte[] bytes = arrayOutputStream.toByteArray();
+                bitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.length);
+            } catch (FileNotFoundException e) {
+                e.printStackTrace();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+            return bitmap;
         }
     }
 

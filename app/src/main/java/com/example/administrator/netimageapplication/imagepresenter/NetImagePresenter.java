@@ -4,11 +4,12 @@ import android.graphics.Bitmap;
 import android.view.View;
 import android.widget.ImageView;
 
-import com.example.administrator.netimageapplication.Bean.ImageCache;
-import com.example.administrator.netimageapplication.Bean.ImageInfo;
+import com.example.administrator.netimageapplication.bean.ImageCache;
+import com.example.administrator.netimageapplication.bean.ImageInfo;
 import com.example.administrator.netimageapplication.imagedisplayer.INetImageDisplayer;
 import com.example.administrator.netimageapplication.imageloader.IImageLoader;
 import com.example.administrator.netimageapplication.imageloader.ImageLoader;
+import com.example.administrator.netimageapplication.view.PercentProgressBar;
 
 import java.util.ArrayList;
 
@@ -45,14 +46,12 @@ public class NetImagePresenter {
      * @param imageCache 图片内存缓存，加载完成后将图片缓存到这里
      * @param thumbnail  是否是缩略图，否则是原图
      */
-    public void loadNetImage(ImageInfo imageInfo, ImageView imageView, ImageCache imageCache, boolean thumbnail) {
+    public void loadNetImage(ImageInfo imageInfo, PercentProgressBar percentProgressBar, ImageView imageView, ImageCache imageCache, boolean thumbnail) {
         // 判断这个加载请求是缩略图加载还是原图加载，原图的话要显示原图的进度条并更新进度
-        if (!thumbnail) {
-            iNetImageDisplayer.updateOriginalImageProgress(0);
-            iNetImageDisplayer.changeOriginalImageProgressBarVisibility(View.VISIBLE);
-        }
+        iNetImageDisplayer.updateImageLoadingProgress(0, percentProgressBar);
+        iNetImageDisplayer.changeImageProgressBarVisibility(percentProgressBar, View.VISIBLE);
         // 开始加载图片
-        iImageLoader.loadNetImage(imageInfo, imageView, imageCache, thumbnail);
+        iImageLoader.loadNetImage(imageInfo, imageView, percentProgressBar, imageCache, thumbnail);
     }
 
     /**
@@ -61,10 +60,10 @@ public class NetImagePresenter {
      * @param infos 图片数据
      */
     public void netImageInfoLoaded(ArrayList<ArrayList<ImageInfo>> infos) {
-        // 图片数据加载完毕，回调数据交给Activity处理
-        iNetImageDisplayer.netImageInfoLoaded(infos);
         // 隐藏进度条
         iNetImageDisplayer.changeImageInfoProgressBarVisibility(View.GONE);
+        // 图片数据加载完毕，回调数据交给Activity处理
+        iNetImageDisplayer.netImageInfoLoaded(infos);
     }
 
     /**
@@ -73,13 +72,15 @@ public class NetImagePresenter {
      * @param bitmap    图片
      * @param imageView View
      */
-    public void netImageLoaded(Bitmap bitmap, ImageView imageView) {
+    public void netImageLoaded(Bitmap bitmap, ImageView imageView, PercentProgressBar percentProgressBar) {
         // 图片加载完毕，回调让activity把图片设置给imageView
-        if (bitmap != null&&imageView != null) {
+        if (bitmap != null && imageView != null) {
             iNetImageDisplayer.setImageViewBitmap(imageView, bitmap);
         }
         // 隐藏进度条
-        iNetImageDisplayer.changeOriginalImageProgressBarVisibility(View.GONE);
+        if (percentProgressBar != null) {
+            iNetImageDisplayer.changeImageProgressBarVisibility(percentProgressBar, View.GONE);
+        }
     }
 
     /**
@@ -98,27 +99,25 @@ public class NetImagePresenter {
     }
 
     /**
-     * 原图下载进度变化时回调
+     * 图片下载进度变化时回调
      *
      * @param percent 进度百分比
      */
-    public void loadingProgressUpdate(int percent) {
+    public void loadingProgressUpdate(int percent, PercentProgressBar percentProgressBar) {
         // 更新Activity中进度条的进度
-        iNetImageDisplayer.updateOriginalImageProgress(percent);
+        iNetImageDisplayer.updateImageLoadingProgress(percent, percentProgressBar);
     }
 
-    public void stopLoading(){
+    public void stopLoading() {
         iImageLoader.shutdownAllTask();
     }
 
-    public void loadImageFailed(boolean thumbnail){
-        if (!thumbnail) {
-            iNetImageDisplayer.changeOriginalImageProgressBarVisibility(View.GONE);
-        }
+    public void loadImageFailed(PercentProgressBar percentProgressBar) {
+        iNetImageDisplayer.changeImageProgressBarVisibility(percentProgressBar, View.GONE);
         iNetImageDisplayer.ToastImageLoadFailedInfo();
     }
 
-    public void loadImageInfoFailed(){
+    public void loadImageInfoFailed() {
         // 隐藏进度条
         iNetImageDisplayer.changeImageInfoProgressBarVisibility(View.GONE);
         iNetImageDisplayer.setRetryButtonVisibility(View.VISIBLE);

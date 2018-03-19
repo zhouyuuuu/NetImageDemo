@@ -11,10 +11,10 @@ import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import com.example.administrator.netimageapplication.Bean.ImageCache;
-import com.example.administrator.netimageapplication.Bean.ImageInfo;
 import com.example.administrator.netimageapplication.R;
 import com.example.administrator.netimageapplication.application.NetImageApplication;
+import com.example.administrator.netimageapplication.bean.ImageCache;
+import com.example.administrator.netimageapplication.bean.ImageInfo;
 import com.example.administrator.netimageapplication.imagepresenter.NetImagePresenter;
 import com.example.administrator.netimageapplication.view.PercentProgressBar;
 
@@ -32,7 +32,7 @@ public class NetImageActivity extends AppCompatActivity implements INetImageDisp
     // 原图大图的ImageView
     private ImageView mIvOriginalImage;
     // 加载原图的进度条
-    private PercentProgressBar mPbLoadOriginalImage;
+    private PercentProgressBar mPpbLoadOriginalImage;
     // 加载所有图片数据(原图Url和缩略图Url)的进度条
     private ProgressBar mPbLoadImageInfo;
     // 缩略图列表RecyclerView
@@ -72,7 +72,7 @@ public class NetImageActivity extends AppCompatActivity implements INetImageDisp
      * 初始化View
      */
     private void initView() {
-        mPbLoadOriginalImage = findViewById(R.id.pb_original_image);
+        mPpbLoadOriginalImage = findViewById(R.id.pb_original_image);
         mPbLoadImageInfo = findViewById(R.id.pb_image_info);
         mRvThumbnailList = findViewById(R.id.rv_thumbnail);
         mIvOriginalImage = findViewById(R.id.iv_original_image);
@@ -115,16 +115,16 @@ public class NetImageActivity extends AppCompatActivity implements INetImageDisp
     }
 
     /**
-     * 原图下载过程中每下载1kb回调该方法，用于更新progressBar的进度
+     * 图片下载过程中每下载1kb回调该方法，用于更新对应的progressBar的进度
      *
      * @param percent 百分比
      */
     @Override
-    public void updateOriginalImageProgress(final int percent) {
+    public void updateImageLoadingProgress(final int percent, final PercentProgressBar percentProgressBar) {
         runOnUiThread(new Runnable() {
             @Override
             public void run() {
-                mPbLoadOriginalImage.setPercent(percent);
+                percentProgressBar.setPercent(percent);
             }
         });
     }
@@ -144,8 +144,8 @@ public class NetImageActivity extends AppCompatActivity implements INetImageDisp
      * @param imageCache 图片内存缓存，加载完成后将图片缓存到这里
      * @param thumbnail  是否是缩略图，否则是原图
      */
-    public void loadImage(ImageView imageView, ImageInfo imageInfo, ImageCache imageCache, boolean thumbnail) {
-        mNetImagePresenter.loadNetImage(imageInfo, imageView, imageCache, thumbnail);
+    public void loadImage(ImageView imageView, PercentProgressBar percentProgressBar, ImageInfo imageInfo, ImageCache imageCache, boolean thumbnail) {
+        mNetImagePresenter.loadNetImage(imageInfo, percentProgressBar, imageView, imageCache, thumbnail);
     }
 
     /**
@@ -158,6 +158,9 @@ public class NetImageActivity extends AppCompatActivity implements INetImageDisp
         return mRvThumbnailList.getScrollState() == RecyclerView.SCROLL_STATE_IDLE;
     }
 
+    /**
+     * 设置重试按钮是否可见
+     */
     @Override
     public void setRetryButtonVisibility(final int visibility) {
         runOnUiThread(new Runnable() {
@@ -168,12 +171,15 @@ public class NetImageActivity extends AppCompatActivity implements INetImageDisp
         });
     }
 
+    /**
+     * 加载图片失败弹出消息
+     */
     @Override
     public void ToastImageLoadFailedInfo() {
         runOnUiThread(new Runnable() {
             @Override
             public void run() {
-                Toast.makeText(NetImageApplication.getApplication(),INFO_LOAD_FAILED,Toast.LENGTH_SHORT).show();
+                Toast.makeText(NetImageApplication.getApplication(), INFO_LOAD_FAILED, Toast.LENGTH_SHORT).show();
             }
         });
     }
@@ -205,6 +211,7 @@ public class NetImageActivity extends AppCompatActivity implements INetImageDisp
             // 同步到子项数量标记列表
             mSubItemCountList.add(0);
         }
+        // 数据获取完成后通知RecyclerView更新
         runOnUiThread(new Runnable() {
             @Override
             public void run() {
@@ -214,16 +221,16 @@ public class NetImageActivity extends AppCompatActivity implements INetImageDisp
     }
 
     /**
-     * 设置原图加载进度条是否可见
+     * 设置图片加载进度条是否可见
      *
      * @param visibility 可见度
      */
     @Override
-    public void changeOriginalImageProgressBarVisibility(final int visibility) {
+    public void changeImageProgressBarVisibility(final PercentProgressBar percentProgressBar, final int visibility) {
         runOnUiThread(new Runnable() {
             @Override
             public void run() {
-                mPbLoadOriginalImage.setVisibility(visibility);
+                percentProgressBar.setVisibility(visibility);
             }
         });
     }
@@ -269,7 +276,7 @@ public class NetImageActivity extends AppCompatActivity implements INetImageDisp
      * @param holder   Item对应的holder
      */
     @Override
-    public void OnItemClick(int position, NetImageAdapter.ImageViewHolder holder) {
+    public void OnItemClick(int position, NetImageAdapter.ItemHolder holder) {
         // 如果RecyclerView正在执行动画，不执行点击事件以防止数据混乱造成的数组越界
         if (mRecyclerViewExecutingAnimation) return;
         // 点击项为子项时加载原图
@@ -279,7 +286,7 @@ public class NetImageActivity extends AppCompatActivity implements INetImageDisp
             if (bitmap != null) {
                 mIvOriginalImage.setImageBitmap(bitmap);
             } else {
-                loadImage(mIvOriginalImage, mDisplayingImageInfos.get(position), mImageCache, false);
+                loadImage(mIvOriginalImage, mPpbLoadOriginalImage, mDisplayingImageInfos.get(position), mImageCache, false);
             }
             return;
         }
@@ -385,9 +392,12 @@ public class NetImageActivity extends AppCompatActivity implements INetImageDisp
         super.onDestroy();
     }
 
+    /**
+     * 点击重试按钮重新获取图片数据
+     */
     @Override
     public void onClick(View v) {
-        switch (v.getId()){
+        switch (v.getId()) {
             case R.id.tv_retry:
                 mTvRetry.setVisibility(View.GONE);
                 loadImageInfos();
