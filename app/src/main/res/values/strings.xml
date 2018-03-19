@@ -2,4 +2,5 @@
     <string name="app_name">NetImageApplication</string>
     <string name="todo">TODO</string>
     <string name="tv_retry">数据加载不出来了，点我重试一下~</string>
+    <string name="launch">启动</string>
 </resources>
