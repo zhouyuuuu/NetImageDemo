@@ -23,8 +23,6 @@ public interface INetImageDisplayer {
 
     void changeImageInfoProgressBarVisibility(int visibility);
 
-    boolean isReadyToUpdate();
-
     void setRetryButtonVisibility(int visibility);
 
     void ToastImageLoadFailedInfo();

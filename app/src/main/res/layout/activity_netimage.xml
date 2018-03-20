@@ -3,7 +3,7 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="#555555"
+    android:background="#444444"
     tools:context="com.example.administrator.netimageapplication.imagedisplayer.NetImageActivity">
 
     <android.support.v7.widget.RecyclerView

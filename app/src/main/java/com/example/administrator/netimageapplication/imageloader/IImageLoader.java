@@ -15,7 +15,9 @@ public interface IImageLoader {
 
     void loadNetImage(ImageInfo ii, ImageView iv, PercentProgressBar ppb, ImageCache ic, boolean thumbnail);
 
-    void notifyAllThread();
-
     void shutdownAllTask();
+
+    void restartLoading();
+
+    void pauseLoading();
 }

@@ -105,9 +105,18 @@ public class NetImageActivity extends AppCompatActivity implements INetImageDisp
         mRvThumbnailList.addOnScrollListener(new RecyclerView.OnScrollListener() {
             @Override
             public void onScrollStateChanged(RecyclerView recyclerView, int newState) {
-                // RecyclerView停止滚动时通知被加载的图片可以设置到ImageView上了，停止时再设置可以保证滑动流畅性
+                // RecyclerView停止滚动时重新开始加载，滑动时停止加载可以保证滑动流畅性
                 if (newState == RecyclerView.SCROLL_STATE_IDLE) {
-                    mNetImagePresenter.notifyIsReadyToUpdate();
+                    mNetImagePresenter.restartLoading();
+                    // 滚动停止时刷新可见的Item，如果Item还没有图片，则会调用加载图片的方法
+                    int firstPosition = mLayoutManager.findFirstVisibleItemPosition();
+                    int lastPosition = mLayoutManager.findLastVisibleItemPosition();
+                    for (int i=firstPosition;i<=lastPosition;i++){
+                        mNetImageAdapter.notifyItemChanged(i);
+                    }
+                }else {
+                    // 开始滚动了就暂停加载
+                    mNetImagePresenter.pauseLoading();
                 }
             }
         });
@@ -149,12 +158,11 @@ public class NetImageActivity extends AppCompatActivity implements INetImageDisp
     }
 
     /**
-     * 当RecyclerView处于停止滑动的状态时，即可进行图片更新
+     * 当RecyclerView处于停止滑动的状态时，即可进行图片加载
      *
-     * @return 是否可更新
+     * @return 是否处于可以加载图片的状态
      */
-    @Override
-    public boolean isReadyToUpdate() {
+    public boolean readyToLoad() {
         return mRvThumbnailList.getScrollState() == RecyclerView.SCROLL_STATE_IDLE;
     }
 
@@ -404,6 +412,24 @@ public class NetImageActivity extends AppCompatActivity implements INetImageDisp
                 break;
             default:
                 break;
+        }
+    }
+
+    @Override
+    protected void onStop() {
+        super.onStop();
+        // Stop时暂停加载
+        mNetImagePresenter.pauseLoading();
+    }
+
+    @Override
+    protected void onRestart() {
+        super.onRestart();
+        mNetImagePresenter.restartLoading();
+        int firstPosition = mLayoutManager.findFirstVisibleItemPosition();
+        int lastPosition = mLayoutManager.findLastVisibleItemPosition();
+        for (int i=firstPosition;i<=lastPosition;i++){
+            mNetImageAdapter.notifyItemChanged(i);
         }
     }
 }

@@ -29,7 +29,7 @@ public class NetUtil {
     // 请求超时默认时间10秒
     private static final int REQUEST_TIMEOUT = 5000;
     // 干货集中营提供的一百张图片的api
-    private static final java.lang.String resource = "http://gank.io/api/data/%E7%A6%8F%E5%88%A9/100/1";
+    private static final java.lang.String resource = "http://gank.io/api/data/%E7%A6%8F%E5%88%A9/300/1";
     // 缩略图后缀，原图url后面加上该参数则为缩略图url
     private static final java.lang.String THUMBNAIL_PARAM = "?imageView2/0/w/300";
     // 返回的JSON数据中图片数据对应的key
@@ -40,7 +40,7 @@ public class NetUtil {
     /**
      * 加载图片
      */
-    public static Bitmap loadBitmap(java.lang.String path, ProgressListener listener, PercentProgressBar percentProgressBar) {
+    public static Bitmap loadBitmap(java.lang.String path, ProgressListener listener, PercentProgressBar percentProgressBar, Boolean isCancelled) {
         Bitmap bitmap = null;
         try {
             URL url = new URL(path);
@@ -58,6 +58,7 @@ public class NetUtil {
             // 使用缓存
             connection.setUseCaches(true);
             connection.connect();
+            if (isCancelled) return null;
             // 如果没连接成功则返回空
             if (connection.getResponseCode() != 200) {
                 return null;
@@ -76,7 +77,7 @@ public class NetUtil {
                 alreadyLength += len;
                 // 仅在下载原图时回调进度更新监听器
                 if (listener != null) {
-                    listener.onProgressUpdate((int) (alreadyLength * 1.0f / totalLength * 100),percentProgressBar);
+                    listener.onProgressUpdate((int) (alreadyLength * 1.0f / totalLength * 100), percentProgressBar);
                 }
             }
             is.close();
@@ -127,8 +128,8 @@ public class NetUtil {
             String thumbnailUrl = originalImageUrl + THUMBNAIL_PARAM;
             // new一个ImageInfo对象把URL传进去
             ImageInfo imageInfo = new ImageInfo(ImageInfo.ITEM_TYPE_SUB_ITEM, thumbnailUrl, originalImageUrl);
-            if (i % 10 == 0) {
-                // 按每10张图片分为新的一组，每组的第一个位置添加一张封面，封面为10张图片中的第一张
+            if (i % 30 == 0) {
+                // 按每30张图片分为新的一组，每组的第一个位置添加一张封面，封面为30张图片中的第一张
                 group = new ArrayList<>();
                 imageInfos.add(group);
                 // 先复制第一张图片作为封面添加进group中

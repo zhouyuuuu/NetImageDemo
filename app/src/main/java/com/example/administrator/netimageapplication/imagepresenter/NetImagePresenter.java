@@ -83,19 +83,12 @@ public class NetImagePresenter {
         }
     }
 
-    /**
-     * View准备好更新时回调
-     */
-    public void notifyIsReadyToUpdate() {
-        // 提醒ImageLoader可以更新View了
-        iImageLoader.notifyAllThread();
+    public void restartLoading(){
+        iImageLoader.restartLoading();
     }
 
-    /**
-     * 检查是否View可以更新图片
-     */
-    public boolean ifDisplayerIsReadyToUpdate() {
-        return iNetImageDisplayer.isReadyToUpdate();
+    public void pauseLoading(){
+        iImageLoader.pauseLoading();
     }
 
     /**

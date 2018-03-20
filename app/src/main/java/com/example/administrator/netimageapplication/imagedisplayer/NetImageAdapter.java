@@ -68,7 +68,9 @@ public class NetImageAdapter extends RecyclerView.Adapter<NetImageAdapter.ItemHo
             holder.iv.setImageBitmap(image);
         } else {
             holder.iv.setImageResource(R.drawable.bg_gray_round);
-            mNetImageActivity.loadImage(holder.iv, holder.ppb, imageInfo, mImageCache, true);
+            if (mNetImageActivity.readyToLoad()) {
+                mNetImageActivity.loadImage(holder.iv, holder.ppb, imageInfo, mImageCache, true);
+            }
         }
         // Item点击事件的监听器在这里触发
         holder.iv.setOnClickListener(new View.OnClickListener() {
