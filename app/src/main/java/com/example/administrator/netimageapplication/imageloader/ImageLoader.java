@@ -160,35 +160,7 @@ public class ImageLoader implements IImageLoader, NetUtil.ProgressListener {
         return bitmap;
     }
 
-    /**
-     * 线程池运行Runnable的基类
-     */
-    private static abstract class BaseLoadRunnable implements Runnable, Comparable<BaseLoadRunnable> {
 
-        private int priority;
-
-        BaseLoadRunnable(int priority) {
-            this.priority = priority;
-        }
-
-        private int getPriority() {
-            return priority;
-        }
-
-        @Override
-        public int compareTo(@NonNull BaseLoadRunnable another) {
-            int my = this.getPriority();
-            int other = another.getPriority();
-            return my < other ? 1 : my > other ? -1 : 0;
-        }
-
-        @Override
-        public void run() {
-            call();
-        }
-
-        protected abstract void call();
-    }
 
     /**
      * 通知唤醒的Runnable
@@ -255,12 +227,11 @@ public class ImageLoader implements IImageLoader, NetUtil.ProgressListener {
                 e.printStackTrace();
             }
             NetImagePresenter netImagePresenter = mNetImagePresenterRef.get();
-            if (netImagePresenter != null) {
-                if (infos != null) {
-                    netImagePresenter.netImageInfoLoaded(infos);
-                } else {
-                    netImagePresenter.loadImageInfoFailed();
-                }
+            if (netImagePresenter == null) return;
+            if (infos != null) {
+                netImagePresenter.netImageInfoLoaded(infos);
+            } else {
+                netImagePresenter.loadImageInfoFailed();
             }
         }
     }
@@ -306,54 +277,93 @@ public class ImageLoader implements IImageLoader, NetUtil.ProgressListener {
             NetImagePresenter netImagePresenter = mNetImagePresenterRef.get();
             ImageView imageView = imageViewRef.get();
             PercentProgressBar percentProgressBar = percentProgressBarRef.get();
-            if (netImagePresenter != null) {
-                if (imageView != null && percentProgressBar != null) {
-                    // 显示开始加载图片的进度条
-                    netImagePresenter.showProgressBar(url, percentProgressBar);
-                    // 获取图片
-                    if (isCancelled) {
-                        netImagePresenter.hideProgressBar(url, percentProgressBar);
-                        synchronized (mRestartRequests) {
-                            synchronized (mRunningRequests) {
-                                mRunningRequests.remove(this);
-                                mRestartRequests.add(this);
-                            }
-                        }
-                        return;
-                    }
-                    bitmap = getBitmap(url, imageView, percentProgressBar, imageCacheRef.get());
-                    if (isCancelled) {
-                        // 取消了要隐藏进度条
-                        netImagePresenter.hideProgressBar(url, percentProgressBar);
-                        synchronized (mRestartRequests) {
-                            synchronized (mRunningRequests) {
-                                mRunningRequests.remove(this);
-                                mRestartRequests.add(this);
-                            }
-                        }
-                        return;
-                    }
-                    if (bitmap == null) {
-                        netImagePresenter.loadImageFailed();
-                        // 失败了要隐藏进度条
-                        netImagePresenter.hideProgressBar(url, percentProgressBar);
-                        synchronized (mRunningRequests) {
-                            mRunningRequests.remove(this);
-                        }
-                        return;
-                    }
-                    // 通知presenter图片加载完成
-                    netImagePresenter.netImageLoaded(bitmap, imageView, url);
-                    // 完成了要隐藏进度条
-                    netImagePresenter.hideProgressBar(url, percentProgressBar);
-                } else {
-                    netImagePresenter.netImageLoaded(null, null, url);
+            if (netImagePresenter == null) {
+                netImagePresenter.netImageLoaded(null, null, url);
+                synchronized (mRunningRequests) {
+                    mRunningRequests.remove(this);
                 }
+                return;
             }
+            if (isCancelled) {
+                synchronized (mRestartRequests) {
+                    synchronized (mRunningRequests) {
+                        mRunningRequests.remove(this);
+                        mRestartRequests.add(this);
+                    }
+                }
+                return;
+            }
+            if (imageView == null || percentProgressBar == null) {
+                netImagePresenter.netImageLoaded(null, null, url);
+                // 结束前将此任务从mRunningRequests中移除
+                synchronized (mRunningRequests) {
+                    mRunningRequests.remove(this);
+                }
+                return;
+            }
+            // 显示开始加载图片的进度条
+            netImagePresenter.showProgressBar(url, percentProgressBar);
+            // 获取图片
+            bitmap = getBitmap(url, imageView, percentProgressBar, imageCacheRef.get());
+            if (isCancelled) {
+                // 取消了要隐藏进度条
+                netImagePresenter.hideProgressBar(url, percentProgressBar);
+                synchronized (mRestartRequests) {
+                    synchronized (mRunningRequests) {
+                        mRunningRequests.remove(this);
+                        mRestartRequests.add(this);
+                    }
+                }
+                return;
+            }
+            if (bitmap == null) {
+                netImagePresenter.loadImageFailed();
+                // 失败了要隐藏进度条
+                netImagePresenter.hideProgressBar(url, percentProgressBar);
+                synchronized (mRunningRequests) {
+                    mRunningRequests.remove(this);
+                }
+                return;
+            }
+            // 通知presenter图片加载完成
+            netImagePresenter.netImageLoaded(bitmap, imageView, url);
+            // 完成了要隐藏进度条
+            netImagePresenter.hideProgressBar(url, percentProgressBar);
             // 结束前将此任务从mRunningRequests中移除
             synchronized (mRunningRequests) {
                 mRunningRequests.remove(this);
             }
         }
+    }
+
+
+    /**
+     * 线程池运行Runnable的基类
+     */
+    private static abstract class BaseLoadRunnable implements Runnable, Comparable<BaseLoadRunnable> {
+
+        private int priority;
+
+        BaseLoadRunnable(int priority) {
+            this.priority = priority;
+        }
+
+        private int getPriority() {
+            return priority;
+        }
+
+        @Override
+        public int compareTo(@NonNull BaseLoadRunnable another) {
+            int my = this.getPriority();
+            int other = another.getPriority();
+            return my < other ? 1 : my > other ? -1 : 0;
+        }
+
+        @Override
+        public void run() {
+            call();
+        }
+
+        protected abstract void call();
     }
 }

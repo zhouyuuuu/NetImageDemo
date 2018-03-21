@@ -445,6 +445,7 @@ public class NetImageActivity extends AppCompatActivity implements INetImageDisp
     @Override
     protected void onRestart() {
         super.onRestart();
+        // 恢复加载并刷新可见Item
         mNetImagePresenter.restartLoading();
         refreshVisibleItemInRecyclerView();
     }
