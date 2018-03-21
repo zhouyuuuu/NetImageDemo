@@ -105,17 +105,31 @@ public class NetImageActivity extends AppCompatActivity implements INetImageDisp
         mRvThumbnailList.addOnScrollListener(new RecyclerView.OnScrollListener() {
             @Override
             public void onScrollStateChanged(RecyclerView recyclerView, int newState) {
-                // RecyclerView停止滚动时重新开始加载，滑动时停止加载可以保证滑动流畅性
-                if (newState == RecyclerView.SCROLL_STATE_IDLE) {
+                // RecyclerView快速滑动时不加载图片，避免卡顿
+                if (newState != RecyclerView.SCROLL_STATE_SETTLING) {
                     mNetImagePresenter.restartLoading();
-                    // 滚动停止时刷新可见的Item，如果Item还没有图片，则会调用加载图片的方法
+                    // 以下用于刷新RecyclerView中的可视Item
                     int firstPosition = mLayoutManager.findFirstVisibleItemPosition();
                     int lastPosition = mLayoutManager.findLastVisibleItemPosition();
+                    NetImageAdapter.ItemHolder holder;
+                    ImageInfo imageInfo;
+                    Bitmap bitmap;
                     for (int i=firstPosition;i<=lastPosition;i++){
-                        mNetImageAdapter.notifyItemChanged(i);
+                        imageInfo = mDisplayingImageInfos.get(i);
+                        holder = (NetImageAdapter.ItemHolder)mRvThumbnailList.findViewHolderForAdapterPosition(i);
+                        // 刷新之前设置好Tag来确定控件被哪个url占用
+                        holder.iv.setTag(R.id.url_iv,imageInfo.getThumbnailUrl());
+                        holder.ppb.setTag(R.id.url_ppd,imageInfo.getThumbnailUrl());
+                        // 内存缓存中拿到图片的话就直接设置给ImageView，否则进行加载
+                        bitmap = mImageCache.getBitmap(imageInfo.getThumbnailUrl());
+                        if (bitmap != null){
+                            holder.iv.setImageBitmap(bitmap);
+                        }else {
+                            loadImage(holder.iv,holder.ppb,imageInfo,mImageCache,true);
+                        }
                     }
                 }else {
-                    // 开始滚动了就暂停加载
+                    // 开始快速滚动了就暂停加载
                     mNetImagePresenter.pauseLoading();
                 }
             }
@@ -158,12 +172,12 @@ public class NetImageActivity extends AppCompatActivity implements INetImageDisp
     }
 
     /**
-     * 当RecyclerView处于停止滑动的状态时，即可进行图片加载
+     * 当RecyclerView处于非快速滑动的状态时，即可进行图片加载
      *
      * @return 是否处于可以加载图片的状态
      */
     public boolean readyToLoad() {
-        return mRvThumbnailList.getScrollState() == RecyclerView.SCROLL_STATE_IDLE;
+        return mRvThumbnailList.getScrollState() != RecyclerView.SCROLL_STATE_SETTLING;
     }
 
     /**
@@ -289,12 +303,16 @@ public class NetImageActivity extends AppCompatActivity implements INetImageDisp
         if (mRecyclerViewExecutingAnimation) return;
         // 点击项为子项时加载原图
         if (mDisplayingImageInfos.get(position).getViewType() == ImageInfo.ITEM_TYPE_SUB_ITEM) {
+            ImageInfo imageInfo = mDisplayingImageInfos.get(position);
+            // 用户点击时就将imageView和progressBar的Tag设置好，设置慢了容易出错
+            mIvOriginalImage.setTag(R.id.url_iv,imageInfo.getOriginalImageUrl());
+            mPpbLoadOriginalImage.setTag(R.id.url_ppd,imageInfo.getOriginalImageUrl());
             // 先在内存缓存中找图片，找不到则去加载图片
-            Bitmap bitmap = mImageCache.getBitmap(mDisplayingImageInfos.get(position).getOriginalImageUrl());
+            Bitmap bitmap = mImageCache.getBitmap(imageInfo.getOriginalImageUrl());
             if (bitmap != null) {
                 mIvOriginalImage.setImageBitmap(bitmap);
             } else {
-                loadImage(mIvOriginalImage, mPpbLoadOriginalImage, mDisplayingImageInfos.get(position), mImageCache, false);
+                loadImage(mIvOriginalImage, mPpbLoadOriginalImage, imageInfo, mImageCache, false);
             }
             return;
         }
@@ -426,10 +444,25 @@ public class NetImageActivity extends AppCompatActivity implements INetImageDisp
     protected void onRestart() {
         super.onRestart();
         mNetImagePresenter.restartLoading();
+        // 以下用于刷新RecyclerView中的可视Item
         int firstPosition = mLayoutManager.findFirstVisibleItemPosition();
         int lastPosition = mLayoutManager.findLastVisibleItemPosition();
+        NetImageAdapter.ItemHolder holder;
+        ImageInfo imageInfo;
+        Bitmap bitmap;
         for (int i=firstPosition;i<=lastPosition;i++){
-            mNetImageAdapter.notifyItemChanged(i);
+            imageInfo = mDisplayingImageInfos.get(i);
+            holder = (NetImageAdapter.ItemHolder)mRvThumbnailList.findViewHolderForAdapterPosition(i);
+            // 刷新之前设置好Tag来确定控件被哪个url占用
+            holder.iv.setTag(R.id.url_iv,imageInfo.getThumbnailUrl());
+            holder.ppb.setTag(R.id.url_ppd,imageInfo.getThumbnailUrl());
+            // 内存缓存中拿到图片的话就直接设置给ImageView，否则进行加载
+            bitmap = mImageCache.getBitmap(imageInfo.getThumbnailUrl());
+            if (bitmap != null){
+                holder.iv.setImageBitmap(bitmap);
+            }else {
+                loadImage(holder.iv,holder.ppb,imageInfo,mImageCache,true);
+            }
         }
     }
 }

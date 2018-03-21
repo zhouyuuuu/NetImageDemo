@@ -4,6 +4,7 @@ import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.support.annotation.NonNull;
 
+import com.example.administrator.netimageapplication.R;
 import com.example.administrator.netimageapplication.application.NetImageApplication;
 import com.example.administrator.netimageapplication.view.PercentProgressBar;
 
@@ -45,8 +46,8 @@ public class DiskUtil {
                 while ((len = fileInputStream.read(buff)) != -1) {
                     arrayOutputStream.write(buff, 0, len);
                     alreadyLength += len;
-                    // 仅在下载原图时回调进度更新监听器
-                    if (listener != null) {
+                    // 回调进度更新监听器，当url与progressBar的tag不一样时说明该progressBar已经属于另外一个任务了，则不进行回调
+                    if (listener != null&&url.equals(percentProgressBar.getTag(R.id.url_ppd))) {
                         listener.onProgressUpdate((int) (alreadyLength * 1.0f / totalLength * 100), percentProgressBar);
                     }
                 }

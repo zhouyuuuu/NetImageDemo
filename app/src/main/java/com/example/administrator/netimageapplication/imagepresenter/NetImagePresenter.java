@@ -4,6 +4,7 @@ import android.graphics.Bitmap;
 import android.view.View;
 import android.widget.ImageView;
 
+import com.example.administrator.netimageapplication.R;
 import com.example.administrator.netimageapplication.bean.ImageCache;
 import com.example.administrator.netimageapplication.bean.ImageInfo;
 import com.example.administrator.netimageapplication.imagedisplayer.INetImageDisplayer;
@@ -47,11 +48,24 @@ public class NetImagePresenter {
      * @param thumbnail  是否是缩略图，否则是原图
      */
     public void loadNetImage(ImageInfo imageInfo, PercentProgressBar percentProgressBar, ImageView imageView, ImageCache imageCache, boolean thumbnail) {
-        // 判断这个加载请求是缩略图加载还是原图加载，原图的话要显示原图的进度条并更新进度
-        iNetImageDisplayer.updateImageLoadingProgress(0, percentProgressBar);
-        iNetImageDisplayer.changeImageProgressBarVisibility(percentProgressBar, View.VISIBLE);
         // 开始加载图片
         iImageLoader.loadNetImage(imageInfo, imageView, percentProgressBar, imageCache, thumbnail);
+    }
+
+    public void showProgressBar(String url,PercentProgressBar percentProgressBar){
+        // url必须和progressBar的Tag相等才有权操作
+        if (percentProgressBar != null&&url.equals(percentProgressBar.getTag(R.id.url_ppd))) {
+            // 每次显示都将其进度设置为0，因为这总是代表着一个加载操作的开始
+            iNetImageDisplayer.updateImageLoadingProgress(0, percentProgressBar);
+            iNetImageDisplayer.changeImageProgressBarVisibility(percentProgressBar, View.VISIBLE);
+        }
+    }
+
+    public void hideProgressBar(String url,PercentProgressBar percentProgressBar){
+        // url必须和progressBar的Tag相等才有权操作
+        if (percentProgressBar != null&&url.equals(percentProgressBar.getTag(R.id.url_ppd))) {
+            iNetImageDisplayer.changeImageProgressBarVisibility(percentProgressBar, View.GONE);
+        }
     }
 
     /**
@@ -72,14 +86,10 @@ public class NetImagePresenter {
      * @param bitmap    图片
      * @param imageView View
      */
-    public void netImageLoaded(Bitmap bitmap, ImageView imageView, PercentProgressBar percentProgressBar) {
+    public void netImageLoaded(Bitmap bitmap, ImageView imageView) {
         // 图片加载完毕，回调让activity把图片设置给imageView
         if (bitmap != null && imageView != null) {
             iNetImageDisplayer.setImageViewBitmap(imageView, bitmap);
-        }
-        // 隐藏进度条
-        if (percentProgressBar != null) {
-            iNetImageDisplayer.changeImageProgressBarVisibility(percentProgressBar, View.GONE);
         }
     }
 
@@ -105,14 +115,15 @@ public class NetImagePresenter {
         iImageLoader.shutdownAllTask();
     }
 
-    public void loadImageFailed(PercentProgressBar percentProgressBar) {
-        iNetImageDisplayer.changeImageProgressBarVisibility(percentProgressBar, View.GONE);
+    public void loadImageFailed() {
+        // 弹出加载失败的信息
         iNetImageDisplayer.ToastImageLoadFailedInfo();
     }
 
     public void loadImageInfoFailed() {
         // 隐藏进度条
         iNetImageDisplayer.changeImageInfoProgressBarVisibility(View.GONE);
+        // 显示重试按钮
         iNetImageDisplayer.setRetryButtonVisibility(View.VISIBLE);
     }
 }

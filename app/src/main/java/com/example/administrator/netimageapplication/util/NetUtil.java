@@ -3,6 +3,7 @@ package com.example.administrator.netimageapplication.util;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 
+import com.example.administrator.netimageapplication.R;
 import com.example.administrator.netimageapplication.bean.ImageInfo;
 import com.example.administrator.netimageapplication.view.PercentProgressBar;
 
@@ -25,22 +26,22 @@ import java.util.ArrayList;
 
 public class NetUtil {
     // 默认请求方法，DEMO中只要用到GET
-    private static final java.lang.String HTTP_METHOD_GET = "GET";
+    private static final String HTTP_METHOD_GET = "GET";
     // 请求超时默认时间10秒
     private static final int REQUEST_TIMEOUT = 5000;
     // 干货集中营提供的一百张图片的api
-    private static final java.lang.String resource = "http://gank.io/api/data/%E7%A6%8F%E5%88%A9/300/1";
+    private static final String resource = "http://gank.io/api/data/%E7%A6%8F%E5%88%A9/300/1";
     // 缩略图后缀，原图url后面加上该参数则为缩略图url
-    private static final java.lang.String THUMBNAIL_PARAM = "?imageView2/0/w/300";
+    private static final String THUMBNAIL_PARAM = "?imageView2/0/w/100";
     // 返回的JSON数据中图片数据对应的key
-    private static final java.lang.String KEY_RESULT = "results";
+    private static final String KEY_RESULT = "results";
     // 图片数据中url对应的key
-    private static final java.lang.String KEY_URL = "url";
+    private static final String KEY_URL = "url";
 
     /**
      * 加载图片
      */
-    public static Bitmap loadBitmap(java.lang.String path, ProgressListener listener, PercentProgressBar percentProgressBar, Boolean isCancelled) {
+    public static Bitmap loadBitmap(String path, ProgressListener listener, PercentProgressBar percentProgressBar, Boolean isCancelled) {
         Bitmap bitmap = null;
         try {
             URL url = new URL(path);
@@ -75,8 +76,8 @@ public class NetUtil {
             while ((len = is.read(buff)) != -1) {
                 arrayOutputStream.write(buff, 0, len);
                 alreadyLength += len;
-                // 仅在下载原图时回调进度更新监听器
-                if (listener != null) {
+                // 回调进度更新监听器，当url与progressBar的tag不一样时说明该progressBar已经属于另外一个任务了，则不进行回调
+                if (listener != null&&path.equals(percentProgressBar.getTag(R.id.url_ppd))) {
                     listener.onProgressUpdate((int) (alreadyLength * 1.0f / totalLength * 100), percentProgressBar);
                 }
             }

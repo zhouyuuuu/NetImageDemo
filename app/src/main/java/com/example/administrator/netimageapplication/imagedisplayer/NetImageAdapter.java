@@ -60,14 +60,19 @@ public class NetImageAdapter extends RecyclerView.Adapter<NetImageAdapter.ItemHo
 
     @Override
     public void onBindViewHolder(@NonNull final ItemHolder holder, int position) {
+        // 每次都先将控件初始化，避免View复用携带了之前的数据
+        holder.ppb.setVisibility(View.GONE);
+        holder.iv.setImageResource(R.drawable.bg_gray_round);
         ImageInfo imageInfo = mDisplayingImageInfos.get(position);
+        // 开始加载前设置好Tag来确认View属于哪个Url
+        holder.iv.setTag(R.id.url_iv,imageInfo.getThumbnailUrl());
+        holder.ppb.setTag(R.id.url_ppd,imageInfo.getThumbnailUrl());
         // 先从内存缓存中获取
         Bitmap image = mImageCache.getBitmap(imageInfo.getThumbnailUrl());
         // 获取到图片就直接设置就可以，如果没有获取到则先设置一个默认图片，然后调用activity中的loadImage加载图片
         if (image != null) {
             holder.iv.setImageBitmap(image);
         } else {
-            holder.iv.setImageResource(R.drawable.bg_gray_round);
             if (mNetImageActivity.readyToLoad()) {
                 mNetImageActivity.loadImage(holder.iv, holder.ppb, imageInfo, mImageCache, true);
             }
