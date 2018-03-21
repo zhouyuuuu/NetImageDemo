@@ -4,7 +4,6 @@ import android.graphics.Bitmap;
 import android.support.annotation.NonNull;
 import android.widget.ImageView;
 
-import com.example.administrator.netimageapplication.R;
 import com.example.administrator.netimageapplication.bean.ImageCache;
 import com.example.administrator.netimageapplication.bean.ImageInfo;
 import com.example.administrator.netimageapplication.imagepresenter.NetImagePresenter;
@@ -100,6 +99,7 @@ public class ImageLoader implements IImageLoader, NetUtil.ProgressListener {
     @Override
     public void shutdownAllTask() {
         mThreadPoolExecutor.shutdownNow();
+        mNotifyThreadPoolExecutor.shutdownNow();
     }
 
     @Override
@@ -131,28 +131,30 @@ public class ImageLoader implements IImageLoader, NetUtil.ProgressListener {
     private Bitmap getBitmap(String url, ImageView imageView, PercentProgressBar percentProgressBar, ImageCache imageCache) {
         // 从内存缓存中获取图片
         Bitmap bitmap = imageCache == null ? null : imageCache.getBitmap(url);
-        if (bitmap == null) {
-            // 硬盘中获取图片
-            bitmap = DiskUtil.loadBitmap(url, this, percentProgressBar);
-            // 如果硬盘获取不到
-            if (bitmap == null) {
-                // 网络下载图片
-                bitmap = NetUtil.loadBitmap(url, mImageLoader, percentProgressBar, isCancelled);
-                if (bitmap != null) {
-                    // 下载完成的图片进行压缩
-                    bitmap = BitmapUtil.resizeBitmap(bitmap, imageView);
-                    // 缓存一份到硬盘
-                    DiskUtil.saveBitmap(bitmap, url);
-                    // 缓存一份到内存
-                    if (imageCache != null) {
-                        imageCache.putBitmap(url, bitmap);
-                    }
-                }
-            } else {
-                // 缓存一份到内存
-                if (imageCache != null) {
-                    imageCache.putBitmap(url, bitmap);
-                }
+        if (bitmap != null) {
+            return bitmap;
+        }
+
+        // 硬盘中获取图片
+        bitmap = DiskUtil.loadBitmap(url, this, percentProgressBar);
+        if (bitmap != null) {
+            // 缓存一份到内存
+            if (imageCache != null) {
+                imageCache.putBitmap(url, bitmap);
+            }
+            return bitmap;
+        }
+
+        // 网络下载图片
+        bitmap = NetUtil.loadBitmap(url, mImageLoader, percentProgressBar, isCancelled);
+        if (bitmap != null) {
+            // 下载完成的图片进行压缩
+            bitmap = BitmapUtil.resizeBitmap(bitmap, imageView);
+            // 缓存一份到硬盘
+            DiskUtil.saveBitmap(bitmap, url);
+            // 缓存一份到内存
+            if (imageCache != null) {
+                imageCache.putBitmap(url, bitmap);
             }
         }
         return bitmap;
@@ -305,12 +307,12 @@ public class ImageLoader implements IImageLoader, NetUtil.ProgressListener {
             ImageView imageView = imageViewRef.get();
             PercentProgressBar percentProgressBar = percentProgressBarRef.get();
             if (netImagePresenter != null) {
-                if (imageView != null&&percentProgressBar!=null) {
+                if (imageView != null && percentProgressBar != null) {
                     // 显示开始加载图片的进度条
-                        netImagePresenter.showProgressBar(url,percentProgressBar);
+                    netImagePresenter.showProgressBar(url, percentProgressBar);
                     // 获取图片
                     if (isCancelled) {
-                        netImagePresenter.hideProgressBar(url,percentProgressBar);
+                        netImagePresenter.hideProgressBar(url, percentProgressBar);
                         synchronized (mRestartRequests) {
                             synchronized (mRunningRequests) {
                                 mRunningRequests.remove(this);
@@ -322,7 +324,7 @@ public class ImageLoader implements IImageLoader, NetUtil.ProgressListener {
                     bitmap = getBitmap(url, imageView, percentProgressBar, imageCacheRef.get());
                     if (isCancelled) {
                         // 取消了要隐藏进度条
-                        netImagePresenter.hideProgressBar(url,percentProgressBar);
+                        netImagePresenter.hideProgressBar(url, percentProgressBar);
                         synchronized (mRestartRequests) {
                             synchronized (mRunningRequests) {
                                 mRunningRequests.remove(this);
@@ -334,20 +336,18 @@ public class ImageLoader implements IImageLoader, NetUtil.ProgressListener {
                     if (bitmap == null) {
                         netImagePresenter.loadImageFailed();
                         // 失败了要隐藏进度条
-                        netImagePresenter.hideProgressBar(url,percentProgressBar);
+                        netImagePresenter.hideProgressBar(url, percentProgressBar);
                         synchronized (mRunningRequests) {
                             mRunningRequests.remove(this);
                         }
                         return;
                     }
-                    if (url.equals(imageView.getTag(R.id.url_iv))) {
-                        // 通知presenter图片加载完成
-                        netImagePresenter.netImageLoaded(bitmap, imageView);
-                    }
+                    // 通知presenter图片加载完成
+                    netImagePresenter.netImageLoaded(bitmap, imageView, url);
                     // 完成了要隐藏进度条
-                    netImagePresenter.hideProgressBar(url,percentProgressBar);
+                    netImagePresenter.hideProgressBar(url, percentProgressBar);
                 } else {
-                    netImagePresenter.netImageLoaded(null, null);
+                    netImagePresenter.netImageLoaded(null, null, url);
                 }
             }
             // 结束前将此任务从mRunningRequests中移除

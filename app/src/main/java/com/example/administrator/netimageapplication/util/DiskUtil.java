@@ -4,7 +4,6 @@ import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.support.annotation.NonNull;
 
-import com.example.administrator.netimageapplication.R;
 import com.example.administrator.netimageapplication.application.NetImageApplication;
 import com.example.administrator.netimageapplication.view.PercentProgressBar;
 
@@ -21,9 +20,8 @@ import java.io.IOException;
  */
 
 public class DiskUtil {
-    /**
-     * 从硬盘中获取图片
-     */
+
+    // 从硬盘中获取图片
     public static Bitmap loadBitmap(@NonNull String url, NetUtil.ProgressListener listener, PercentProgressBar percentProgressBar) {
         Bitmap bitmap = null;
         // 文件名为url的hashcode，因为存储时也是用hashcode作为文件名
@@ -46,8 +44,8 @@ public class DiskUtil {
                 while ((len = fileInputStream.read(buff)) != -1) {
                     arrayOutputStream.write(buff, 0, len);
                     alreadyLength += len;
-                    // 回调进度更新监听器，当url与progressBar的tag不一样时说明该progressBar已经属于另外一个任务了，则不进行回调
-                    if (listener != null&&url.equals(percentProgressBar.getTag(R.id.url_ppd))) {
+                    // 回调进度更新监听器，如果url和progressBar没有绑定，则不进行回调
+                    if (listener != null && BindUtil.isBound(percentProgressBar, url)) {
                         listener.onProgressUpdate((int) (alreadyLength * 1.0f / totalLength * 100), percentProgressBar);
                     }
                 }
@@ -64,9 +62,7 @@ public class DiskUtil {
         }
     }
 
-    /**
-     * 将图片存入硬盘
-     */
+    // 将图片存入硬盘
     public static void saveBitmap(@NonNull Bitmap bitmap, @NonNull String url) {
         // 用hashcode作为文件名可以避免url长度太大造成文件名过长
         String fileName = String.valueOf(url.hashCode());

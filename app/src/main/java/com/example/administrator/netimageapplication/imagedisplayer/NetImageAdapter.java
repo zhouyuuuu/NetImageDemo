@@ -12,6 +12,7 @@ import com.example.administrator.netimageapplication.R;
 import com.example.administrator.netimageapplication.application.NetImageApplication;
 import com.example.administrator.netimageapplication.bean.ImageCache;
 import com.example.administrator.netimageapplication.bean.ImageInfo;
+import com.example.administrator.netimageapplication.util.BindUtil;
 import com.example.administrator.netimageapplication.view.PercentProgressBar;
 
 import java.util.ArrayList;
@@ -64,9 +65,9 @@ public class NetImageAdapter extends RecyclerView.Adapter<NetImageAdapter.ItemHo
         holder.ppb.setVisibility(View.GONE);
         holder.iv.setImageResource(R.drawable.bg_gray_round);
         ImageInfo imageInfo = mDisplayingImageInfos.get(position);
-        // 开始加载前设置好Tag来确认View属于哪个Url
-        holder.iv.setTag(R.id.url_iv,imageInfo.getThumbnailUrl());
-        holder.ppb.setTag(R.id.url_ppd,imageInfo.getThumbnailUrl());
+        // 将Url和View绑定在一起
+        BindUtil.bindUrlAndView(holder.iv,imageInfo.getThumbnailUrl());
+        BindUtil.bindUrlAndView(holder.ppb,imageInfo.getThumbnailUrl());
         // 先从内存缓存中获取
         Bitmap image = mImageCache.getBitmap(imageInfo.getThumbnailUrl());
         // 获取到图片就直接设置就可以，如果没有获取到则先设置一个默认图片，然后调用activity中的loadImage加载图片

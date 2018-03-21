@@ -4,12 +4,12 @@ import android.graphics.Bitmap;
 import android.view.View;
 import android.widget.ImageView;
 
-import com.example.administrator.netimageapplication.R;
 import com.example.administrator.netimageapplication.bean.ImageCache;
 import com.example.administrator.netimageapplication.bean.ImageInfo;
 import com.example.administrator.netimageapplication.imagedisplayer.INetImageDisplayer;
 import com.example.administrator.netimageapplication.imageloader.IImageLoader;
 import com.example.administrator.netimageapplication.imageloader.ImageLoader;
+import com.example.administrator.netimageapplication.util.BindUtil;
 import com.example.administrator.netimageapplication.view.PercentProgressBar;
 
 import java.util.ArrayList;
@@ -52,18 +52,18 @@ public class NetImagePresenter {
         iImageLoader.loadNetImage(imageInfo, imageView, percentProgressBar, imageCache, thumbnail);
     }
 
-    public void showProgressBar(String url,PercentProgressBar percentProgressBar){
-        // url必须和progressBar的Tag相等才有权操作
-        if (percentProgressBar != null&&url.equals(percentProgressBar.getTag(R.id.url_ppd))) {
+    public void showProgressBar(String url, PercentProgressBar percentProgressBar) {
+        // url必须和progressBar绑定了才有权操作
+        if (percentProgressBar != null && BindUtil.isBound(percentProgressBar, url)) {
             // 每次显示都将其进度设置为0，因为这总是代表着一个加载操作的开始
             iNetImageDisplayer.updateImageLoadingProgress(0, percentProgressBar);
             iNetImageDisplayer.changeImageProgressBarVisibility(percentProgressBar, View.VISIBLE);
         }
     }
 
-    public void hideProgressBar(String url,PercentProgressBar percentProgressBar){
-        // url必须和progressBar的Tag相等才有权操作
-        if (percentProgressBar != null&&url.equals(percentProgressBar.getTag(R.id.url_ppd))) {
+    public void hideProgressBar(String url, PercentProgressBar percentProgressBar) {
+        // url必须和progressBar绑定了才有权操作
+        if (percentProgressBar != null && BindUtil.isBound(percentProgressBar, url)) {
             iNetImageDisplayer.changeImageProgressBarVisibility(percentProgressBar, View.GONE);
         }
     }
@@ -86,18 +86,18 @@ public class NetImagePresenter {
      * @param bitmap    图片
      * @param imageView View
      */
-    public void netImageLoaded(Bitmap bitmap, ImageView imageView) {
-        // 图片加载完毕，回调让activity把图片设置给imageView
-        if (bitmap != null && imageView != null) {
+    public void netImageLoaded(Bitmap bitmap, ImageView imageView, String url) {
+        // 图片加载完毕，回调让activity把图片设置给imageView，注意url要与image有绑定关系，如果没绑定则不设置
+        if (bitmap != null && imageView != null && BindUtil.isBound(imageView, url)) {
             iNetImageDisplayer.setImageViewBitmap(imageView, bitmap);
         }
     }
 
-    public void restartLoading(){
+    public void restartLoading() {
         iImageLoader.restartLoading();
     }
 
-    public void pauseLoading(){
+    public void pauseLoading() {
         iImageLoader.pauseLoading();
     }
 

@@ -1,5 +1,4 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <item type="id" name="url_ppd"/>
-    <item type="id" name="url_iv"/>
+    <item type="id" name="url_view"/>
 </resources>

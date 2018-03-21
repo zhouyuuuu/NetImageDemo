@@ -3,7 +3,6 @@ package com.example.administrator.netimageapplication.util;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 
-import com.example.administrator.netimageapplication.R;
 import com.example.administrator.netimageapplication.bean.ImageInfo;
 import com.example.administrator.netimageapplication.view.PercentProgressBar;
 
@@ -76,8 +75,8 @@ public class NetUtil {
             while ((len = is.read(buff)) != -1) {
                 arrayOutputStream.write(buff, 0, len);
                 alreadyLength += len;
-                // 回调进度更新监听器，当url与progressBar的tag不一样时说明该progressBar已经属于另外一个任务了，则不进行回调
-                if (listener != null&&path.equals(percentProgressBar.getTag(R.id.url_ppd))) {
+                // 回调进度更新监听器，如果url和progressBar没有绑定，则不进行回调
+                if (listener != null && BindUtil.isBound(percentProgressBar, path)) {
                     listener.onProgressUpdate((int) (alreadyLength * 1.0f / totalLength * 100), percentProgressBar);
                 }
             }

@@ -16,6 +16,7 @@ import com.example.administrator.netimageapplication.application.NetImageApplica
 import com.example.administrator.netimageapplication.bean.ImageCache;
 import com.example.administrator.netimageapplication.bean.ImageInfo;
 import com.example.administrator.netimageapplication.imagepresenter.NetImagePresenter;
+import com.example.administrator.netimageapplication.util.BindUtil;
 import com.example.administrator.netimageapplication.view.PercentProgressBar;
 
 import java.util.ArrayList;
@@ -108,27 +109,8 @@ public class NetImageActivity extends AppCompatActivity implements INetImageDisp
                 // RecyclerView快速滑动时不加载图片，避免卡顿
                 if (newState != RecyclerView.SCROLL_STATE_SETTLING) {
                     mNetImagePresenter.restartLoading();
-                    // 以下用于刷新RecyclerView中的可视Item
-                    int firstPosition = mLayoutManager.findFirstVisibleItemPosition();
-                    int lastPosition = mLayoutManager.findLastVisibleItemPosition();
-                    NetImageAdapter.ItemHolder holder;
-                    ImageInfo imageInfo;
-                    Bitmap bitmap;
-                    for (int i=firstPosition;i<=lastPosition;i++){
-                        imageInfo = mDisplayingImageInfos.get(i);
-                        holder = (NetImageAdapter.ItemHolder)mRvThumbnailList.findViewHolderForAdapterPosition(i);
-                        // 刷新之前设置好Tag来确定控件被哪个url占用
-                        holder.iv.setTag(R.id.url_iv,imageInfo.getThumbnailUrl());
-                        holder.ppb.setTag(R.id.url_ppd,imageInfo.getThumbnailUrl());
-                        // 内存缓存中拿到图片的话就直接设置给ImageView，否则进行加载
-                        bitmap = mImageCache.getBitmap(imageInfo.getThumbnailUrl());
-                        if (bitmap != null){
-                            holder.iv.setImageBitmap(bitmap);
-                        }else {
-                            loadImage(holder.iv,holder.ppb,imageInfo,mImageCache,true);
-                        }
-                    }
-                }else {
+                    refreshVisibleItemInRecyclerView();
+                } else {
                     // 开始快速滚动了就暂停加载
                     mNetImagePresenter.pauseLoading();
                 }
@@ -304,9 +286,9 @@ public class NetImageActivity extends AppCompatActivity implements INetImageDisp
         // 点击项为子项时加载原图
         if (mDisplayingImageInfos.get(position).getViewType() == ImageInfo.ITEM_TYPE_SUB_ITEM) {
             ImageInfo imageInfo = mDisplayingImageInfos.get(position);
-            // 用户点击时就将imageView和progressBar的Tag设置好，设置慢了容易出错
-            mIvOriginalImage.setTag(R.id.url_iv,imageInfo.getOriginalImageUrl());
-            mPpbLoadOriginalImage.setTag(R.id.url_ppd,imageInfo.getOriginalImageUrl());
+            // 用户点击时就将Url和View绑定在一起，设置慢了容易出错
+            BindUtil.bindUrlAndView(mIvOriginalImage, imageInfo.getOriginalImageUrl());
+            BindUtil.bindUrlAndView(mPpbLoadOriginalImage, imageInfo.getOriginalImageUrl());
             // 先在内存缓存中找图片，找不到则去加载图片
             Bitmap bitmap = mImageCache.getBitmap(imageInfo.getOriginalImageUrl());
             if (bitmap != null) {
@@ -412,10 +394,30 @@ public class NetImageActivity extends AppCompatActivity implements INetImageDisp
         }
     }
 
-    @Override
-    protected void onDestroy() {
-        mNetImagePresenter.stopLoading();
-        super.onDestroy();
+    /**
+     * 刷新RecyclerView中可见的ITEM，不调用notifyItemChanged因为这样会使Item执行Change动画，这并不是我们希望的
+     */
+    private void refreshVisibleItemInRecyclerView(){
+        // 以下用于刷新RecyclerView中的可视Item
+        int firstPosition = mLayoutManager.findFirstVisibleItemPosition();
+        int lastPosition = mLayoutManager.findLastVisibleItemPosition();
+        NetImageAdapter.ItemHolder holder;
+        ImageInfo imageInfo;
+        Bitmap bitmap;
+        for (int i = firstPosition; i <= lastPosition; i++) {
+            imageInfo = mDisplayingImageInfos.get(i);
+            holder = (NetImageAdapter.ItemHolder) mRvThumbnailList.findViewHolderForAdapterPosition(i);
+            // 将Url和View绑定在一起
+            BindUtil.bindUrlAndView(holder.iv, imageInfo.getThumbnailUrl());
+            BindUtil.bindUrlAndView(holder.ppb, imageInfo.getThumbnailUrl());
+            // 内存缓存中拿到图片的话就直接设置给ImageView，否则进行加载
+            bitmap = mImageCache.getBitmap(imageInfo.getThumbnailUrl());
+            if (bitmap != null) {
+                holder.iv.setImageBitmap(bitmap);
+            } else {
+                loadImage(holder.iv, holder.ppb, imageInfo, mImageCache, true);
+            }
+        }
     }
 
     /**
@@ -444,25 +446,13 @@ public class NetImageActivity extends AppCompatActivity implements INetImageDisp
     protected void onRestart() {
         super.onRestart();
         mNetImagePresenter.restartLoading();
-        // 以下用于刷新RecyclerView中的可视Item
-        int firstPosition = mLayoutManager.findFirstVisibleItemPosition();
-        int lastPosition = mLayoutManager.findLastVisibleItemPosition();
-        NetImageAdapter.ItemHolder holder;
-        ImageInfo imageInfo;
-        Bitmap bitmap;
-        for (int i=firstPosition;i<=lastPosition;i++){
-            imageInfo = mDisplayingImageInfos.get(i);
-            holder = (NetImageAdapter.ItemHolder)mRvThumbnailList.findViewHolderForAdapterPosition(i);
-            // 刷新之前设置好Tag来确定控件被哪个url占用
-            holder.iv.setTag(R.id.url_iv,imageInfo.getThumbnailUrl());
-            holder.ppb.setTag(R.id.url_ppd,imageInfo.getThumbnailUrl());
-            // 内存缓存中拿到图片的话就直接设置给ImageView，否则进行加载
-            bitmap = mImageCache.getBitmap(imageInfo.getThumbnailUrl());
-            if (bitmap != null){
-                holder.iv.setImageBitmap(bitmap);
-            }else {
-                loadImage(holder.iv,holder.ppb,imageInfo,mImageCache,true);
-            }
-        }
+        refreshVisibleItemInRecyclerView();
     }
+
+    @Override
+    protected void onDestroy() {
+        mNetImagePresenter.stopLoading();
+        super.onDestroy();
+    }
+
 }
