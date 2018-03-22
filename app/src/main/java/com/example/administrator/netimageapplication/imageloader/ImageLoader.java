@@ -25,9 +25,7 @@ import java.util.concurrent.TimeUnit;
  * Edited by Administrator on 2018/3/14.
  */
 
-public class ImageLoader implements IImageLoader, NetUtil.ProgressListener {
-    // 持有自己的引用，作为同步锁的对象
-    private final ImageLoader mImageLoader;
+public class ImageLoader implements IImageLoader {
     // 需要被重新执行的加载请求
     private final ArrayList<LoadNetImageRunnable> mRestartRequests;
     // 即将要执行的加载请求
@@ -41,16 +39,26 @@ public class ImageLoader implements IImageLoader, NetUtil.ProgressListener {
     // 通知唤醒线程池(核心1，最大1)
     private ThreadPoolExecutor mNotifyThreadPoolExecutor;
     // 取消加载标志位
-    private volatile Boolean isCancelled = false;
+    private volatile Boolean mIsCancelled = false;
+    // 进度监听器
+    private ProgressListener mProgressListener;
 
     public ImageLoader(NetImagePresenter mNetImagePresenter) {
         this.mNetImagePresenterRef = new WeakReference<>(mNetImagePresenter);
-        mImageLoader = this;
         mThreadPoolExecutor = new ThreadPoolExecutor(3, 5, 10, TimeUnit.SECONDS, new PriorityBlockingQueue<Runnable>());
         mNotifyThreadPoolExecutor = new ThreadPoolExecutor(1, 1, 10, TimeUnit.SECONDS, new PriorityBlockingQueue<Runnable>());
         mRestartRequests = new ArrayList<>();
         mPendingRequests = new ArrayList<>();
         mRunningRequests = new ArrayList<>();
+        mProgressListener = new ProgressListener() {
+            @Override
+            public void onProgressUpdate(int percent, PercentProgressBar percentProgressBar, String url) {
+                NetImagePresenter netImagePresenter = mNetImagePresenterRef.get();
+                if (netImagePresenter != null) {
+                    netImagePresenter.loadingProgressUpdate(percent, percentProgressBar, url);
+                }
+            }
+        };
     }
 
     /**
@@ -65,25 +73,25 @@ public class ImageLoader implements IImageLoader, NetUtil.ProgressListener {
      * 提交一条加载图片的线程到线程池中
      */
     @Override
-    public void loadNetImage(ImageInfo ii, ImageView iv, PercentProgressBar ppb, ImageCache ic, boolean thumbnail) {
-        LoadNetImageRunnable runnable = new LoadNetImageRunnable(1, ii, ppb, iv, ic, thumbnail);
+    public void loadNetImage(ImageInfo imageInfo, ImageView imageView, PercentProgressBar percentProgressBar, ImageCache imageCache, boolean thumbnail) {
+        LoadNetImageRunnable runnable = new LoadNetImageRunnable(1, imageInfo, percentProgressBar, imageView, imageCache, thumbnail);
         loadNetImage(runnable);
     }
 
     private void loadNetImage(LoadNetImageRunnable runnable) {
         // 加载之前要先看看是否有相同的任务正准备执行或者已经在执行了，如果有的话就直接return取消了
         synchronized (mRunningRequests) {
-            for (LoadNetImageRunnable r : mRunningRequests) {
+            for (LoadNetImageRunnable runningRunnable : mRunningRequests) {
                 // 如果thumbnail和imageInfo对象是相同的，我们就认为两个任务相同
-                if (r.thumbnail == runnable.thumbnail && r.imageInfo == runnable.imageInfo) {
+                if (runningRunnable.thumbnail == runnable.thumbnail && runningRunnable.imageInfo == runnable.imageInfo) {
                     return;
                 }
             }
         }
         // 这里同上
         synchronized (mPendingRequests) {
-            for (LoadNetImageRunnable r : mPendingRequests) {
-                if (r.thumbnail == runnable.thumbnail && r.imageInfo == runnable.imageInfo) {
+            for (LoadNetImageRunnable pendingRunnable : mPendingRequests) {
+                if (pendingRunnable.thumbnail == runnable.thumbnail && pendingRunnable.imageInfo == runnable.imageInfo) {
                     return;
                 }
             }
@@ -112,22 +120,8 @@ public class ImageLoader implements IImageLoader, NetUtil.ProgressListener {
         mNotifyThreadPoolExecutor.execute(new PauseRunnable(1));
     }
 
-    /**
-     * 进度更新时回调，通知presenter进度已经变化
-     *
-     * @param percent 进度百分比
-     */
-    @Override
-    public void onProgressUpdate(int percent, PercentProgressBar percentProgressBar) {
-        NetImagePresenter netImagePresenter = mNetImagePresenterRef.get();
-        if (netImagePresenter != null) {
-            netImagePresenter.loadingProgressUpdate(percent, percentProgressBar);
-        }
-    }
 
-    /**
-     * 通过三级缓存策略获取图片
-     */
+    //通过三级缓存策略获取图片
     private Bitmap getBitmap(String url, ImageView imageView, PercentProgressBar percentProgressBar, ImageCache imageCache) {
         // 从内存缓存中获取图片
         Bitmap bitmap = imageCache == null ? null : imageCache.getBitmap(url);
@@ -136,7 +130,7 @@ public class ImageLoader implements IImageLoader, NetUtil.ProgressListener {
         }
 
         // 硬盘中获取图片
-        bitmap = DiskUtil.loadBitmap(url, this, percentProgressBar);
+        bitmap = DiskUtil.loadBitmap(url, mProgressListener, percentProgressBar);
         if (bitmap != null) {
             // 缓存一份到内存
             if (imageCache != null) {
@@ -146,7 +140,7 @@ public class ImageLoader implements IImageLoader, NetUtil.ProgressListener {
         }
 
         // 网络下载图片
-        bitmap = NetUtil.loadBitmap(url, mImageLoader, percentProgressBar, isCancelled);
+        bitmap = NetUtil.loadBitmap(url, mProgressListener, percentProgressBar, mIsCancelled);
         if (bitmap != null) {
             // 下载完成的图片进行压缩
             bitmap = BitmapUtil.resizeBitmap(bitmap, imageView);
@@ -162,9 +156,8 @@ public class ImageLoader implements IImageLoader, NetUtil.ProgressListener {
 
 
 
-    /**
-     * 通知唤醒的Runnable
-     */
+
+    // 通知重新开始请求的Runnable
     private class RestartRunnable extends BaseLoadRunnable {
 
         RestartRunnable(int priority) {
@@ -172,20 +165,19 @@ public class ImageLoader implements IImageLoader, NetUtil.ProgressListener {
         }
 
         @Override
-        protected void call() {
+        void call() {
             synchronized (mRestartRequests) {
                 for (LoadNetImageRunnable runnable : mRestartRequests) {
                     loadNetImage(runnable);
                 }
                 mRestartRequests.clear();
             }
-            isCancelled = false;
+            mIsCancelled = false;
         }
     }
 
-    /**
-     * 通知唤醒的Runnable
-     */
+
+    // 通知请求暂停的Runnable
     private class PauseRunnable extends BaseLoadRunnable {
 
         PauseRunnable(int priority) {
@@ -193,7 +185,7 @@ public class ImageLoader implements IImageLoader, NetUtil.ProgressListener {
         }
 
         @Override
-        protected void call() {
+        void call() {
             synchronized (mRestartRequests) {
                 synchronized (mPendingRequests) {
                     for (LoadNetImageRunnable runnable : mPendingRequests) {
@@ -203,7 +195,7 @@ public class ImageLoader implements IImageLoader, NetUtil.ProgressListener {
                     mPendingRequests.clear();
                 }
             }
-            isCancelled = true;
+            mIsCancelled = true;
         }
     }
 
@@ -217,7 +209,7 @@ public class ImageLoader implements IImageLoader, NetUtil.ProgressListener {
         }
 
         @Override
-        protected void call() {
+        void call() {
             ArrayList<ArrayList<ImageInfo>> infos = null;
             try {
                 infos = NetUtil.loadImageInfo();
@@ -257,7 +249,7 @@ public class ImageLoader implements IImageLoader, NetUtil.ProgressListener {
         }
 
         @Override
-        protected void call() {
+        void call() {
             synchronized (mRunningRequests) {
                 mRunningRequests.add(this);
             }
@@ -278,13 +270,12 @@ public class ImageLoader implements IImageLoader, NetUtil.ProgressListener {
             ImageView imageView = imageViewRef.get();
             PercentProgressBar percentProgressBar = percentProgressBarRef.get();
             if (netImagePresenter == null) {
-                netImagePresenter.netImageLoaded(null, null, url);
                 synchronized (mRunningRequests) {
                     mRunningRequests.remove(this);
                 }
                 return;
             }
-            if (isCancelled) {
+            if (mIsCancelled) {
                 synchronized (mRestartRequests) {
                     synchronized (mRunningRequests) {
                         mRunningRequests.remove(this);
@@ -305,7 +296,7 @@ public class ImageLoader implements IImageLoader, NetUtil.ProgressListener {
             netImagePresenter.showProgressBar(url, percentProgressBar);
             // 获取图片
             bitmap = getBitmap(url, imageView, percentProgressBar, imageCacheRef.get());
-            if (isCancelled) {
+            if (mIsCancelled) {
                 // 取消了要隐藏进度条
                 netImagePresenter.hideProgressBar(url, percentProgressBar);
                 synchronized (mRestartRequests) {
@@ -364,6 +355,13 @@ public class ImageLoader implements IImageLoader, NetUtil.ProgressListener {
             call();
         }
 
-        protected abstract void call();
+        abstract void call();
+    }
+
+    /**
+     * 进度监听器
+     */
+    public interface ProgressListener {
+        void onProgressUpdate(int percent, PercentProgressBar percentProgressBar, String url);
     }
 }

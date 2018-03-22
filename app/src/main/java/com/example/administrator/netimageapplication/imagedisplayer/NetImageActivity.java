@@ -56,6 +56,8 @@ public class NetImageActivity extends AppCompatActivity implements INetImageDisp
     private TelescopicItemAnimator mTelescopicItemAnimator;
     // recyclerView执行动画的状态，执行中会无视用户的点击事件(添加或删除RecyclerView数据元素)，因为动画过程中增删元素会造成元素position和动画错乱，甚至导致崩溃
     private boolean mRecyclerViewExecutingAnimation = false;
+    // 是否取消了加载
+    private boolean mIsCancelLoading = false;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -108,10 +110,12 @@ public class NetImageActivity extends AppCompatActivity implements INetImageDisp
             public void onScrollStateChanged(RecyclerView recyclerView, int newState) {
                 // RecyclerView快速滑动时不加载图片，避免卡顿
                 if (newState != RecyclerView.SCROLL_STATE_SETTLING) {
+                    mIsCancelLoading = false;
                     mNetImagePresenter.restartLoading();
                     refreshVisibleItemInRecyclerView();
                 } else {
                     // 开始快速滚动了就暂停加载
+                    mIsCancelLoading = true;
                     mNetImagePresenter.pauseLoading();
                 }
             }
@@ -125,11 +129,13 @@ public class NetImageActivity extends AppCompatActivity implements INetImageDisp
      * @param percent 百分比
      */
     @Override
-    public void updateImageLoadingProgress(final int percent, final PercentProgressBar percentProgressBar) {
+    public void updateImageLoadingProgress(final int percent, final PercentProgressBar percentProgressBar, final String url) {
         runOnUiThread(new Runnable() {
             @Override
             public void run() {
-                percentProgressBar.setPercent(percent);
+                if (!mIsCancelLoading && BindUtil.isBound(percentProgressBar, url)) {
+                    percentProgressBar.setPercent(percent);
+                }
             }
         });
     }
@@ -192,11 +198,13 @@ public class NetImageActivity extends AppCompatActivity implements INetImageDisp
      * 设置ImageView图片，异步回调
      */
     @Override
-    public void setImageViewBitmap(final ImageView iv, final Bitmap bm) {
+    public void setImageViewBitmap(final ImageView iv, final Bitmap bm, final String url) {
         runOnUiThread(new Runnable() {
             @Override
             public void run() {
-                iv.setImageBitmap(bm);
+                if (!mIsCancelLoading && BindUtil.isBound(iv, url)) {
+                    iv.setImageBitmap(bm);
+                }
             }
         });
     }
@@ -230,11 +238,13 @@ public class NetImageActivity extends AppCompatActivity implements INetImageDisp
      * @param visibility 可见度
      */
     @Override
-    public void changeImageProgressBarVisibility(final PercentProgressBar percentProgressBar, final int visibility) {
+    public void changeImageProgressBarVisibility(final PercentProgressBar percentProgressBar, final int visibility, final String url) {
         runOnUiThread(new Runnable() {
             @Override
             public void run() {
-                percentProgressBar.setVisibility(visibility);
+                if (!mIsCancelLoading && BindUtil.isBound(percentProgressBar, url)) {
+                    percentProgressBar.setVisibility(visibility);
+                }
             }
         });
     }
@@ -397,7 +407,7 @@ public class NetImageActivity extends AppCompatActivity implements INetImageDisp
     /**
      * 刷新RecyclerView中可见的ITEM，不调用notifyItemChanged因为这样会使Item执行Change动画，这并不是我们希望的
      */
-    private void refreshVisibleItemInRecyclerView(){
+    private void refreshVisibleItemInRecyclerView() {
         // 以下用于刷新RecyclerView中的可视Item
         int firstPosition = mLayoutManager.findFirstVisibleItemPosition();
         int lastPosition = mLayoutManager.findLastVisibleItemPosition();
@@ -446,12 +456,14 @@ public class NetImageActivity extends AppCompatActivity implements INetImageDisp
     protected void onRestart() {
         super.onRestart();
         // 恢复加载并刷新可见Item
+        mIsCancelLoading = false;
         mNetImagePresenter.restartLoading();
         refreshVisibleItemInRecyclerView();
     }
 
     @Override
     protected void onDestroy() {
+        mIsCancelLoading = true;
         mNetImagePresenter.stopLoading();
         super.onDestroy();
     }

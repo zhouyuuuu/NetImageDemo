@@ -70,7 +70,7 @@ public class NetImageAdapter extends RecyclerView.Adapter<NetImageAdapter.ItemHo
         BindUtil.bindUrlAndView(holder.ppb,imageInfo.getThumbnailUrl());
         // 先从内存缓存中获取
         Bitmap image = mImageCache.getBitmap(imageInfo.getThumbnailUrl());
-        // 获取到图片就直接设置就可以，如果没有获取到则先设置一个默认图片，然后调用activity中的loadImage加载图片
+        // 获取到图片就直接设置就可以，如果没有获取到则调用activity中的loadImage加载图片
         if (image != null) {
             holder.iv.setImageBitmap(image);
         } else {

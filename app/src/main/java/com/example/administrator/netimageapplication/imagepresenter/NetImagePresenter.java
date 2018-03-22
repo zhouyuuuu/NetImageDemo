@@ -9,7 +9,6 @@ import com.example.administrator.netimageapplication.bean.ImageInfo;
 import com.example.administrator.netimageapplication.imagedisplayer.INetImageDisplayer;
 import com.example.administrator.netimageapplication.imageloader.IImageLoader;
 import com.example.administrator.netimageapplication.imageloader.ImageLoader;
-import com.example.administrator.netimageapplication.util.BindUtil;
 import com.example.administrator.netimageapplication.view.PercentProgressBar;
 
 import java.util.ArrayList;
@@ -20,13 +19,13 @@ import java.util.ArrayList;
 
 public class NetImagePresenter {
     // NetImageActivity
-    private INetImageDisplayer iNetImageDisplayer;
+    private INetImageDisplayer mNetImageDisplayer;
     // ImageLoader
-    private IImageLoader iImageLoader;
+    private IImageLoader mImageLoader;
 
     public NetImagePresenter(INetImageDisplayer iNetImageDisplayer) {
-        this.iNetImageDisplayer = iNetImageDisplayer;
-        this.iImageLoader = new ImageLoader(this);
+        this.mNetImageDisplayer = iNetImageDisplayer;
+        this.mImageLoader = new ImageLoader(this);
     }
 
     /**
@@ -34,9 +33,9 @@ public class NetImagePresenter {
      */
     public void loadNetImageInfo() {
         // 加载前先显示一下进度条
-        iNetImageDisplayer.changeImageInfoProgressBarVisibility(View.VISIBLE);
+        mNetImageDisplayer.changeImageInfoProgressBarVisibility(View.VISIBLE);
         // 开始加载数据
-        iImageLoader.loadNetImageInfo();
+        mImageLoader.loadNetImageInfo();
     }
 
     /**
@@ -49,22 +48,20 @@ public class NetImagePresenter {
      */
     public void loadNetImage(ImageInfo imageInfo, PercentProgressBar percentProgressBar, ImageView imageView, ImageCache imageCache, boolean thumbnail) {
         // 开始加载图片
-        iImageLoader.loadNetImage(imageInfo, imageView, percentProgressBar, imageCache, thumbnail);
+        mImageLoader.loadNetImage(imageInfo, imageView, percentProgressBar, imageCache, thumbnail);
     }
 
     public void showProgressBar(String url, PercentProgressBar percentProgressBar) {
-        // url必须和progressBar绑定了才有权操作
-        if (percentProgressBar != null && BindUtil.isBound(percentProgressBar, url)) {
+        if (percentProgressBar != null) {
             // 每次显示都将其进度设置为0，因为这总是代表着一个加载操作的开始
-            iNetImageDisplayer.updateImageLoadingProgress(0, percentProgressBar);
-            iNetImageDisplayer.changeImageProgressBarVisibility(percentProgressBar, View.VISIBLE);
+            mNetImageDisplayer.updateImageLoadingProgress(0, percentProgressBar, url);
+            mNetImageDisplayer.changeImageProgressBarVisibility(percentProgressBar, View.VISIBLE, url);
         }
     }
 
     public void hideProgressBar(String url, PercentProgressBar percentProgressBar) {
-        // url必须和progressBar绑定了才有权操作
-        if (percentProgressBar != null && BindUtil.isBound(percentProgressBar, url)) {
-            iNetImageDisplayer.changeImageProgressBarVisibility(percentProgressBar, View.GONE);
+        if (percentProgressBar != null) {
+            mNetImageDisplayer.changeImageProgressBarVisibility(percentProgressBar, View.GONE, url);
         }
     }
 
@@ -75,9 +72,9 @@ public class NetImagePresenter {
      */
     public void netImageInfoLoaded(ArrayList<ArrayList<ImageInfo>> infos) {
         // 隐藏进度条
-        iNetImageDisplayer.changeImageInfoProgressBarVisibility(View.GONE);
+        mNetImageDisplayer.changeImageInfoProgressBarVisibility(View.GONE);
         // 图片数据加载完毕，回调数据交给Activity处理
-        iNetImageDisplayer.netImageInfoLoaded(infos);
+        mNetImageDisplayer.netImageInfoLoaded(infos);
     }
 
     /**
@@ -88,17 +85,17 @@ public class NetImagePresenter {
      */
     public void netImageLoaded(Bitmap bitmap, ImageView imageView, String url) {
         // 图片加载完毕，回调让activity把图片设置给imageView，注意url要与image有绑定关系，如果没绑定则不设置
-        if (bitmap != null && imageView != null && BindUtil.isBound(imageView, url)) {
-            iNetImageDisplayer.setImageViewBitmap(imageView, bitmap);
+        if (bitmap != null && imageView != null) {
+            mNetImageDisplayer.setImageViewBitmap(imageView, bitmap, url);
         }
     }
 
     public void restartLoading() {
-        iImageLoader.restartLoading();
+        mImageLoader.restartLoading();
     }
 
     public void pauseLoading() {
-        iImageLoader.pauseLoading();
+        mImageLoader.pauseLoading();
     }
 
     /**
@@ -106,24 +103,24 @@ public class NetImagePresenter {
      *
      * @param percent 进度百分比
      */
-    public void loadingProgressUpdate(int percent, PercentProgressBar percentProgressBar) {
+    public void loadingProgressUpdate(int percent, PercentProgressBar percentProgressBar, String url) {
         // 更新Activity中进度条的进度
-        iNetImageDisplayer.updateImageLoadingProgress(percent, percentProgressBar);
+        mNetImageDisplayer.updateImageLoadingProgress(percent, percentProgressBar, url);
     }
 
     public void stopLoading() {
-        iImageLoader.shutdownAllTask();
+        mImageLoader.shutdownAllTask();
     }
 
     public void loadImageFailed() {
         // 弹出加载失败的信息
-        iNetImageDisplayer.ToastImageLoadFailedInfo();
+        mNetImageDisplayer.ToastImageLoadFailedInfo();
     }
 
     public void loadImageInfoFailed() {
         // 隐藏进度条
-        iNetImageDisplayer.changeImageInfoProgressBarVisibility(View.GONE);
+        mNetImageDisplayer.changeImageInfoProgressBarVisibility(View.GONE);
         // 显示重试按钮
-        iNetImageDisplayer.setRetryButtonVisibility(View.VISIBLE);
+        mNetImageDisplayer.setRetryButtonVisibility(View.VISIBLE);
     }
 }

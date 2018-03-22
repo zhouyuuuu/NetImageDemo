@@ -13,13 +13,13 @@ import java.util.ArrayList;
  */
 
 public interface INetImageDisplayer {
-    void updateImageLoadingProgress(int percent, PercentProgressBar percentProgressBar);
+    void updateImageLoadingProgress(int percent, PercentProgressBar percentProgressBar, String url);
 
-    void setImageViewBitmap(ImageView iv, Bitmap bm);
+    void setImageViewBitmap(ImageView iv, Bitmap bm, String url);
 
     void netImageInfoLoaded(ArrayList<ArrayList<ImageInfo>> infos);
 
-    void changeImageProgressBarVisibility(PercentProgressBar percentProgressBar, int visibility);
+    void changeImageProgressBarVisibility(PercentProgressBar percentProgressBar, int visibility, String url);
 
     void changeImageInfoProgressBarVisibility(int visibility);
 

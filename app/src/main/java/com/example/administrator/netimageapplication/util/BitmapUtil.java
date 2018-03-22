@@ -19,36 +19,36 @@ public class BitmapUtil {
      */
     public static Bitmap resizeBitmap(Bitmap bitmap, ImageView imageView) {
         // 目标宽高
-        int toWidth;
-        int toHeight;
+        int targetWidth;
+        int targetHeight;
         // 当ImageView可以测量到宽高时使用imageView的宽高，否则使用默认宽高
         if (imageView.getWidth() != 0 && imageView.getHeight() != 0) {
-            toWidth = imageView.getWidth();
-            toHeight = imageView.getHeight();
+            targetWidth = imageView.getWidth();
+            targetHeight = imageView.getHeight();
         } else {
-            toWidth = WIDTH_THUMBNAIL_DEFAULT;
-            toHeight = HEIGHT_THUMBNAIL_DEFAULT;
+            targetWidth = WIDTH_THUMBNAIL_DEFAULT;
+            targetHeight = HEIGHT_THUMBNAIL_DEFAULT;
         }
         // 计算目标比例
-        float toScale = toWidth * 1.0f / toHeight;
+        float targetScale = targetWidth * 1.0f / targetHeight;
         // bitmap的原始宽高
         int bitmapWidth = bitmap.getWidth();
         int bitmapHeight = bitmap.getHeight();
         // 如果bitmap已经比imageView小了，则没必要压缩
-        if (bitmapWidth < toWidth && bitmapHeight < toHeight) return bitmap;
+        if (bitmapWidth < targetWidth && bitmapHeight < targetHeight) return bitmap;
         // 计算bitmap比例
         float bitmapScale = bitmapWidth * 1.0f / bitmapHeight;
-        int width;
-        int height;
+        int resultWidth;
+        int resultHeight;
         // 如果bitmap比例大于目标比例，则说明bitmap比目标更“扁”，因此将toWidth作为目标宽度，然后通过toWidth和bitmap原有比例计算得到toHeight，反之同理
-        if (bitmapScale > toScale) {
-            width = toWidth;
-            height = (int) (toWidth / bitmapScale);
+        if (bitmapScale > targetScale) {
+            resultWidth = targetWidth;
+            resultHeight = (int) (targetWidth / bitmapScale);
         } else {
-            height = toHeight;
-            width = (int) (toHeight * bitmapScale);
+            resultHeight = targetHeight;
+            resultWidth = (int) (targetHeight * bitmapScale);
         }
-        return Bitmap.createScaledBitmap(bitmap, width, height, false);
+        return Bitmap.createScaledBitmap(bitmap, resultWidth, resultHeight, false);
     }
 
     /**

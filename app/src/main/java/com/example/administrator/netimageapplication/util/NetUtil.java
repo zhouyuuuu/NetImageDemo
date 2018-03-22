@@ -4,6 +4,7 @@ import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 
 import com.example.administrator.netimageapplication.bean.ImageInfo;
+import com.example.administrator.netimageapplication.imageloader.ImageLoader;
 import com.example.administrator.netimageapplication.view.PercentProgressBar;
 
 import org.json.JSONArray;
@@ -40,7 +41,7 @@ public class NetUtil {
     /**
      * 加载图片
      */
-    public static Bitmap loadBitmap(String path, ProgressListener listener, PercentProgressBar percentProgressBar, Boolean isCancelled) {
+    public static Bitmap loadBitmap(String path, ImageLoader.ProgressListener listener, PercentProgressBar percentProgressBar, Boolean isCancelled) {
         Bitmap bitmap = null;
         try {
             URL url = new URL(path);
@@ -77,7 +78,7 @@ public class NetUtil {
                 alreadyLength += len;
                 // 回调进度更新监听器，如果url和progressBar没有绑定，则不进行回调
                 if (listener != null && BindUtil.isBound(percentProgressBar, path)) {
-                    listener.onProgressUpdate((int) (alreadyLength * 1.0f / totalLength * 100), percentProgressBar);
+                    listener.onProgressUpdate((int) (alreadyLength * 1.0f / totalLength * 100), percentProgressBar, path);
                 }
             }
             is.close();
@@ -144,10 +145,5 @@ public class NetUtil {
         return imageInfos;
     }
 
-    /**
-     * 进度监听器
-     */
-    public interface ProgressListener {
-        void onProgressUpdate(int percent, PercentProgressBar percentProgressBar);
-    }
+
 }

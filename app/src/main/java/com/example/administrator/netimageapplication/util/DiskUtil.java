@@ -5,6 +5,7 @@ import android.graphics.BitmapFactory;
 import android.support.annotation.NonNull;
 
 import com.example.administrator.netimageapplication.application.NetImageApplication;
+import com.example.administrator.netimageapplication.imageloader.ImageLoader;
 import com.example.administrator.netimageapplication.view.PercentProgressBar;
 
 import java.io.ByteArrayOutputStream;
@@ -22,7 +23,7 @@ import java.io.IOException;
 public class DiskUtil {
 
     // 从硬盘中获取图片
-    public static Bitmap loadBitmap(@NonNull String url, NetUtil.ProgressListener listener, PercentProgressBar percentProgressBar) {
+    public static Bitmap loadBitmap(@NonNull String url, ImageLoader.ProgressListener listener, PercentProgressBar percentProgressBar) {
         Bitmap bitmap = null;
         // 文件名为url的hashcode，因为存储时也是用hashcode作为文件名
         String fileName = String.valueOf(url.hashCode());
@@ -46,7 +47,7 @@ public class DiskUtil {
                     alreadyLength += len;
                     // 回调进度更新监听器，如果url和progressBar没有绑定，则不进行回调
                     if (listener != null && BindUtil.isBound(percentProgressBar, url)) {
-                        listener.onProgressUpdate((int) (alreadyLength * 1.0f / totalLength * 100), percentProgressBar);
+                        listener.onProgressUpdate((int) (alreadyLength * 1.0f / totalLength * 100), percentProgressBar, url);
                     }
                 }
                 fileInputStream.close();
