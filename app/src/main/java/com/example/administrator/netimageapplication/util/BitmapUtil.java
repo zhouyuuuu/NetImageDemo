@@ -14,6 +14,10 @@ public class BitmapUtil {
     private static final int WIDTH_THUMBNAIL_DEFAULT = (int) dip2px(70);
     private static final int HEIGHT_THUMBNAIL_DEFAULT = (int) dip2px(70);
 
+    private BitmapUtil(){
+        super();
+    }
+
     /**
      * 将图片压缩到适合imageView的大小
      */

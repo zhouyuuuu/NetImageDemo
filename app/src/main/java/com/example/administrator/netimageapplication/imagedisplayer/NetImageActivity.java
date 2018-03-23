@@ -2,6 +2,8 @@ package com.example.administrator.netimageapplication.imagedisplayer;
 
 import android.graphics.Bitmap;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
@@ -13,7 +15,6 @@ import android.widget.Toast;
 
 import com.example.administrator.netimageapplication.R;
 import com.example.administrator.netimageapplication.application.NetImageApplication;
-import com.example.administrator.netimageapplication.bean.ImageCache;
 import com.example.administrator.netimageapplication.bean.ImageInfo;
 import com.example.administrator.netimageapplication.imagepresenter.NetImagePresenter;
 import com.example.administrator.netimageapplication.util.BindUtil;
@@ -21,7 +22,7 @@ import com.example.administrator.netimageapplication.view.PercentProgressBar;
 
 import java.util.ArrayList;
 
-public class NetImageActivity extends AppCompatActivity implements INetImageDisplayer, NetImageAdapter.ItemClickListener, View.OnClickListener {
+public class NetImageActivity extends AppCompatActivity implements INetImageDisplayer, NetImageAdapter.ItemClickListener, View.OnClickListener, NetImageAdapter.ItemLoadListener {
     // 图片加载失败
     private static final String INFO_LOAD_FAILED = "有张图片加载失败了~~";
     // 默认的动画时间
@@ -42,8 +43,6 @@ public class NetImageActivity extends AppCompatActivity implements INetImageDisp
     private LinearLayoutManager mLayoutManager;
     // RecyclerView的适配器
     private NetImageAdapter mNetImageAdapter;
-    // 图片内存缓存管理类
-    private ImageCache mImageCache;
     // 所有图片的数据(分组存放，一个ArrayList一组)
     private ArrayList<ArrayList<ImageInfo>> mImageInfos;
     // 在RecyclerView中显示的图片集
@@ -58,6 +57,12 @@ public class NetImageActivity extends AppCompatActivity implements INetImageDisp
     private boolean mRecyclerViewExecutingAnimation = false;
     // 是否取消了加载
     private boolean mIsCancelLoading = false;
+    // 全局Toast
+    private Toast mToastLoadFailed = null;
+    // 静态的Handler
+    private LoadHandler mLoadHandler;
+    // RecyclerView快速滑动标志
+    private boolean mQuickSliding = false;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -86,7 +91,7 @@ public class NetImageActivity extends AppCompatActivity implements INetImageDisp
      * 初始化成员变量
      */
     private void initData() {
-        mImageCache = new ImageCache();
+        mLoadHandler = new LoadHandler();
         mImageInfos = new ArrayList<>();
         mDisplayingImageInfos = new ArrayList<>();
         mSubItemCountList = new ArrayList<>();
@@ -100,21 +105,25 @@ public class NetImageActivity extends AppCompatActivity implements INetImageDisp
         mTelescopicItemAnimator.setScreenWidth(this.getWindowManager().getDefaultDisplay().getWidth());
         mNetImagePresenter = new NetImagePresenter(this);
         mLayoutManager = new LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL, false);
-        mNetImageAdapter = new NetImageAdapter(mDisplayingImageInfos, mImageCache, this);
+        mNetImageAdapter = new NetImageAdapter(mDisplayingImageInfos);
         mNetImageAdapter.setItemClickListener(this);
+        mNetImageAdapter.setItemLoadListener(this);
         mRvThumbnailList.setAdapter(mNetImageAdapter);
         mRvThumbnailList.setItemAnimator(mTelescopicItemAnimator);
         mRvThumbnailList.setLayoutManager(mLayoutManager);
         mRvThumbnailList.addOnScrollListener(new RecyclerView.OnScrollListener() {
             @Override
             public void onScrollStateChanged(RecyclerView recyclerView, int newState) {
-                // RecyclerView快速滑动时不加载图片，避免卡顿
-                if (newState != RecyclerView.SCROLL_STATE_SETTLING) {
+                super.onScrollStateChanged(recyclerView, newState);
+                if (newState == RecyclerView.SCROLL_STATE_IDLE){
+                    if (!mQuickSliding) return;
+                    mQuickSliding = false;
                     mIsCancelLoading = false;
-                    mNetImagePresenter.restartLoading();
                     refreshVisibleItemInRecyclerView();
-                } else {
-                    // 开始快速滚动了就暂停加载
+                    mNetImagePresenter.restartLoading();
+                }else {
+                    if (mQuickSliding) return;
+                    mQuickSliding = true;
                     mIsCancelLoading = true;
                     mNetImagePresenter.pauseLoading();
                 }
@@ -130,7 +139,7 @@ public class NetImageActivity extends AppCompatActivity implements INetImageDisp
      */
     @Override
     public void updateImageLoadingProgress(final int percent, final PercentProgressBar percentProgressBar, final String url) {
-        runOnUiThread(new Runnable() {
+        mLoadHandler.post(new Runnable() {
             @Override
             public void run() {
                 if (!mIsCancelLoading && BindUtil.isBound(percentProgressBar, url)) {
@@ -152,11 +161,17 @@ public class NetImageActivity extends AppCompatActivity implements INetImageDisp
      *
      * @param imageView  哪个imageView发起的加载请求，在加载完成后就设置在这个imageView上
      * @param imageInfo  图片数据
-     * @param imageCache 图片内存缓存，加载完成后将图片缓存到这里
      * @param thumbnail  是否是缩略图，否则是原图
      */
-    public void loadImage(ImageView imageView, PercentProgressBar percentProgressBar, ImageInfo imageInfo, ImageCache imageCache, boolean thumbnail) {
-        mNetImagePresenter.loadNetImage(imageInfo, percentProgressBar, imageView, imageCache, thumbnail);
+    public void loadImage(ImageView imageView, PercentProgressBar percentProgressBar, ImageInfo imageInfo, boolean thumbnail) {
+        if (thumbnail) {
+            BindUtil.bindUrlAndView(imageView, imageInfo.getThumbnailUrl());
+            BindUtil.bindUrlAndView(percentProgressBar, imageInfo.getThumbnailUrl());
+        }else {
+            BindUtil.bindUrlAndView(mIvOriginalImage, imageInfo.getOriginalImageUrl());
+            BindUtil.bindUrlAndView(mPpbLoadOriginalImage, imageInfo.getOriginalImageUrl());
+        }
+        mNetImagePresenter.loadNetImage(imageInfo, percentProgressBar, imageView, thumbnail);
     }
 
     /**
@@ -165,7 +180,7 @@ public class NetImageActivity extends AppCompatActivity implements INetImageDisp
      * @return 是否处于可以加载图片的状态
      */
     public boolean readyToLoad() {
-        return mRvThumbnailList.getScrollState() != RecyclerView.SCROLL_STATE_SETTLING;
+        return !mQuickSliding ;
     }
 
     /**
@@ -173,7 +188,7 @@ public class NetImageActivity extends AppCompatActivity implements INetImageDisp
      */
     @Override
     public void setRetryButtonVisibility(final int visibility) {
-        runOnUiThread(new Runnable() {
+        mLoadHandler.post(new Runnable() {
             @Override
             public void run() {
                 mTvRetry.setVisibility(visibility);
@@ -185,13 +200,22 @@ public class NetImageActivity extends AppCompatActivity implements INetImageDisp
      * 加载图片失败弹出消息
      */
     @Override
-    public void ToastImageLoadFailedInfo() {
-        runOnUiThread(new Runnable() {
+    public void toastImageLoadFailedInfo() {
+        mLoadHandler.post(new Runnable() {
             @Override
             public void run() {
-                Toast.makeText(NetImageApplication.getApplication(), INFO_LOAD_FAILED, Toast.LENGTH_SHORT).show();
+                if (mToastLoadFailed == null) {
+                    mToastLoadFailed = Toast.makeText(NetImageApplication.getApplication(), INFO_LOAD_FAILED, Toast.LENGTH_SHORT);
+                    mToastLoadFailed.show();
+                }else {
+                    mToastLoadFailed.show();
+                }
             }
         });
+    }
+
+    public boolean isMainThread() {
+        return Looper.getMainLooper().getThread().getId() == Thread.currentThread().getId();
     }
 
     /**
@@ -199,7 +223,13 @@ public class NetImageActivity extends AppCompatActivity implements INetImageDisp
      */
     @Override
     public void setImageViewBitmap(final ImageView iv, final Bitmap bm, final String url) {
-        runOnUiThread(new Runnable() {
+        if (isMainThread()){
+            if (!mIsCancelLoading && BindUtil.isBound(iv, url)) {
+                iv.setImageBitmap(bm);
+            }
+            return;
+        }
+        mLoadHandler.post(new Runnable() {
             @Override
             public void run() {
                 if (!mIsCancelLoading && BindUtil.isBound(iv, url)) {
@@ -224,7 +254,7 @@ public class NetImageActivity extends AppCompatActivity implements INetImageDisp
             mSubItemCountList.add(0);
         }
         // 数据获取完成后通知RecyclerView更新
-        runOnUiThread(new Runnable() {
+        mLoadHandler.post(new Runnable() {
             @Override
             public void run() {
                 mNetImageAdapter.notifyDataSetChanged();
@@ -239,7 +269,7 @@ public class NetImageActivity extends AppCompatActivity implements INetImageDisp
      */
     @Override
     public void changeImageProgressBarVisibility(final PercentProgressBar percentProgressBar, final int visibility, final String url) {
-        runOnUiThread(new Runnable() {
+        mLoadHandler.post(new Runnable() {
             @Override
             public void run() {
                 if (!mIsCancelLoading && BindUtil.isBound(percentProgressBar, url)) {
@@ -256,7 +286,7 @@ public class NetImageActivity extends AppCompatActivity implements INetImageDisp
      */
     @Override
     public void changeImageInfoProgressBarVisibility(final int visibility) {
-        runOnUiThread(new Runnable() {
+        mLoadHandler.post(new Runnable() {
             @Override
             public void run() {
                 mPbLoadImageInfo.setVisibility(visibility);
@@ -296,16 +326,7 @@ public class NetImageActivity extends AppCompatActivity implements INetImageDisp
         // 点击项为子项时加载原图
         if (mDisplayingImageInfos.get(position).getViewType() == ImageInfo.ITEM_TYPE_SUB_ITEM) {
             ImageInfo imageInfo = mDisplayingImageInfos.get(position);
-            // 用户点击时就将Url和View绑定在一起，设置慢了容易出错
-            BindUtil.bindUrlAndView(mIvOriginalImage, imageInfo.getOriginalImageUrl());
-            BindUtil.bindUrlAndView(mPpbLoadOriginalImage, imageInfo.getOriginalImageUrl());
-            // 先在内存缓存中找图片，找不到则去加载图片
-            Bitmap bitmap = mImageCache.getBitmap(imageInfo.getOriginalImageUrl());
-            if (bitmap != null) {
-                mIvOriginalImage.setImageBitmap(bitmap);
-            } else {
-                loadImage(mIvOriginalImage, mPpbLoadOriginalImage, imageInfo, mImageCache, false);
-            }
+            loadImage(mIvOriginalImage, mPpbLoadOriginalImage, imageInfo, false);
             return;
         }
         // 动画开始
@@ -408,26 +429,7 @@ public class NetImageActivity extends AppCompatActivity implements INetImageDisp
      * 刷新RecyclerView中可见的ITEM，不调用notifyItemChanged因为这样会使Item执行Change动画，这并不是我们希望的
      */
     private void refreshVisibleItemInRecyclerView() {
-        // 以下用于刷新RecyclerView中的可视Item
-        int firstPosition = mLayoutManager.findFirstVisibleItemPosition();
-        int lastPosition = mLayoutManager.findLastVisibleItemPosition();
-        NetImageAdapter.ItemHolder holder;
-        ImageInfo imageInfo;
-        Bitmap bitmap;
-        for (int i = firstPosition; i <= lastPosition; i++) {
-            imageInfo = mDisplayingImageInfos.get(i);
-            holder = (NetImageAdapter.ItemHolder) mRvThumbnailList.findViewHolderForAdapterPosition(i);
-            // 将Url和View绑定在一起
-            BindUtil.bindUrlAndView(holder.iv, imageInfo.getThumbnailUrl());
-            BindUtil.bindUrlAndView(holder.ppb, imageInfo.getThumbnailUrl());
-            // 内存缓存中拿到图片的话就直接设置给ImageView，否则进行加载
-            bitmap = mImageCache.getBitmap(imageInfo.getThumbnailUrl());
-            if (bitmap != null) {
-                holder.iv.setImageBitmap(bitmap);
-            } else {
-                loadImage(holder.iv, holder.ppb, imageInfo, mImageCache, true);
-            }
-        }
+        mNetImageAdapter.notifyDataSetChanged();
     }
 
     /**
@@ -450,6 +452,8 @@ public class NetImageActivity extends AppCompatActivity implements INetImageDisp
         super.onStop();
         // Stop时暂停加载
         mNetImagePresenter.pauseLoading();
+        // RecyclerView清除动画
+        mRvThumbnailList.clearAnimation();
     }
 
     @Override
@@ -468,4 +472,23 @@ public class NetImageActivity extends AppCompatActivity implements INetImageDisp
         super.onDestroy();
     }
 
+    @Override
+    protected void onPause() {
+        super.onPause();
+
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+    }
+
+    @Override
+    public void onLoadItem(ImageView imageView, PercentProgressBar percentProgressBar, ImageInfo imageInfo) {
+        if (readyToLoad()) {
+            loadImage(imageView, percentProgressBar, imageInfo, true);
+        }
+    }
+
+    private static class LoadHandler extends Handler{}
 }

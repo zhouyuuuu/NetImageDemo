@@ -10,6 +10,11 @@ import com.example.administrator.netimageapplication.BuildConfig;
  */
 
 public class LogUtil {
+
+    private LogUtil(){
+        super();
+    }
+
     public static void e(String TAG, String description) {
         if (BuildConfig.LOG) {
             Log.e(TAG, description);

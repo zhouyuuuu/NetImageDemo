@@ -9,6 +9,11 @@ import com.example.administrator.netimageapplication.R;
  */
 
 public class BindUtil {
+
+    private BindUtil(){
+        super();
+    }
+
     // 把url存进View的Tag中
     public static void bindUrlAndView(View v, String url) {
         v.setTag(R.id.url_view, url);

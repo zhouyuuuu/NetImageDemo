@@ -22,6 +22,10 @@ import java.io.IOException;
 
 public class DiskUtil {
 
+    private DiskUtil(){
+        super();
+    }
+
     // 从硬盘中获取图片
     public static Bitmap loadBitmap(@NonNull String url, ImageLoader.ProgressListener listener, PercentProgressBar percentProgressBar) {
         Bitmap bitmap = null;

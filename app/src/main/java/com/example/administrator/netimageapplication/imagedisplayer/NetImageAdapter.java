@@ -1,6 +1,5 @@
 package com.example.administrator.netimageapplication.imagedisplayer;
 
-import android.graphics.Bitmap;
 import android.support.annotation.NonNull;
 import android.support.v7.widget.RecyclerView;
 import android.view.LayoutInflater;
@@ -10,9 +9,7 @@ import android.widget.ImageView;
 
 import com.example.administrator.netimageapplication.R;
 import com.example.administrator.netimageapplication.application.NetImageApplication;
-import com.example.administrator.netimageapplication.bean.ImageCache;
 import com.example.administrator.netimageapplication.bean.ImageInfo;
-import com.example.administrator.netimageapplication.util.BindUtil;
 import com.example.administrator.netimageapplication.view.PercentProgressBar;
 
 import java.util.ArrayList;
@@ -29,17 +26,13 @@ public class NetImageAdapter extends RecyclerView.Adapter<NetImageAdapter.ItemHo
     private LayoutInflater mLayoutInflater;
     // Item点击监听器
     private ItemClickListener mItemClickListener;
-    // 图片内存缓存
-    private ImageCache mImageCache;
-    // 所属Activity，需要调该Activity的loadImage方法加载图片
-    private NetImageActivity mNetImageActivity;
+    // Item加载监听器
+    private ItemLoadListener mItemLoadListener;
 
-    NetImageAdapter(ArrayList<ImageInfo> data, ImageCache images, NetImageActivity netImageActivity) {
+    NetImageAdapter(ArrayList<ImageInfo> data) {
         // 成员变量初始化
         this.mLayoutInflater = LayoutInflater.from(NetImageApplication.getApplication());
         this.mDisplayingImageInfos = data;
-        this.mNetImageActivity = netImageActivity;
-        this.mImageCache = images;
     }
 
 
@@ -65,18 +58,8 @@ public class NetImageAdapter extends RecyclerView.Adapter<NetImageAdapter.ItemHo
         holder.ppb.setVisibility(View.GONE);
         holder.iv.setImageResource(R.drawable.bg_gray_round);
         ImageInfo imageInfo = mDisplayingImageInfos.get(position);
-        // 将Url和View绑定在一起
-        BindUtil.bindUrlAndView(holder.iv,imageInfo.getThumbnailUrl());
-        BindUtil.bindUrlAndView(holder.ppb,imageInfo.getThumbnailUrl());
-        // 先从内存缓存中获取
-        Bitmap image = mImageCache.getBitmap(imageInfo.getThumbnailUrl());
-        // 获取到图片就直接设置就可以，如果没有获取到则调用activity中的loadImage加载图片
-        if (image != null) {
-            holder.iv.setImageBitmap(image);
-        } else {
-            if (mNetImageActivity.readyToLoad()) {
-                mNetImageActivity.loadImage(holder.iv, holder.ppb, imageInfo, mImageCache, true);
-            }
+        if (mItemLoadListener != null){
+            mItemLoadListener.onLoadItem(holder.iv,holder.ppb,imageInfo);
         }
         // Item点击事件的监听器在这里触发
         holder.iv.setOnClickListener(new View.OnClickListener() {
@@ -113,11 +96,22 @@ public class NetImageAdapter extends RecyclerView.Adapter<NetImageAdapter.ItemHo
         mItemClickListener = itemClickListener;
     }
 
+    void setItemLoadListener(ItemLoadListener itemLoadListener){
+        mItemLoadListener = itemLoadListener;
+    }
+
     /**
      * Item点击监听器
      */
     public interface ItemClickListener {
         void OnItemClick(int position, ItemHolder holder);
+    }
+
+    /**
+     * Item加载监听器
+     */
+    public interface ItemLoadListener {
+        void onLoadItem(ImageView imageView, PercentProgressBar percentProgressBar, ImageInfo imageInfo);
     }
 
     /**

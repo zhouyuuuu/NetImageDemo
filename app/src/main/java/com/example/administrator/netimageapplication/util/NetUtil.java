@@ -38,6 +38,10 @@ public class NetUtil {
     // 图片数据中url对应的key
     private static final String KEY_URL = "url";
 
+    private NetUtil(){
+        super();
+    }
+
     /**
      * 加载图片
      */

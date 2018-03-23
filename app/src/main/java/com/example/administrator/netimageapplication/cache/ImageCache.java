@@ -1,4 +1,4 @@
-package com.example.administrator.netimageapplication.bean;
+package com.example.administrator.netimageapplication.cache;
 
 import android.graphics.Bitmap;
 import android.util.LruCache;
